@@ -401,28 +401,6 @@ def WebMetrics():
 	# Tweet contents:
 	# <p class="TweetTextSize TweetTextSize--normal js-tweet-text tweet-text" lang="en" data-aria-label-part="0">Thanks for the shoutout <a href="/cthagod" class="twitter-atreply pretty-link js-nav" dir="ltr" data-mentioned-user-id="17878322"><s>@</s><b>cthagod</b></a> <img class="Emoji Emoji--forText" src="https://abs.twimg.com/emoji/v2/72x72/1f44d.png" draggable="false" alt="👍" title="Thumbs up sign" aria-label="Emoji: Thumbs up sign"><a href="https://t.co/utSmWtDxLD" rel="nofollow noopener" dir="ltr" data-expanded-url="https://www.cbsnews.com/live-news/charlamagne-tha-god-interview-cbs-news-president-2020/?ftag=CNM-00-10aab6a&amp;linkId=65096384" class="twitter-timeline-link u-hidden" target="_blank" title="https://www.cbsnews.com/live-news/charlamagne-tha-god-interview-cbs-news-president-2020/?ftag=CNM-00-10aab6a&amp;linkId=65096384"><span class="tco-ellipsis"></span><span class="invisible">https://www.</span><span class="js-display-url">cbsnews.com/live-news/char</span><span class="invisible">lamagne-tha-god-interview-cbs-news-president-2020/?ftag=CNM-00-10aab6a&amp;linkId=65096384</span><span class="tco-ellipsis"><span class="invisible">&nbsp;</span>…</span></a></p>
 	# <p class="TweetTextSize TweetTextSize--normal js-tweet-text tweet-text" lang="en" data-aria-label-part="0">Fear does not exist in this dojo.<a href="https://t.co/gz8JiqaRCY" class="twitter-timeline-link u-hidden" data-pre-embedded="true" dir="ltr">pic.twitter.com/gz8JiqaRCY</a></p>
-	#
-	# Javascript total tweets from socialblade:
-	# 
-	# <script type="text/javascript">
-		# g = new Dygraph(
-
-		# // containing div
-		# document.getElementById('TotalTweetsGained'),
-		# // CSV or path to a CSV file.
-		# 	"Date,Total Tweets\n" + "2018-02-13,1611\n" +"2018-02-14,1630\n" +"2018-02-15,1640\n" +"2018-02-16,1643\n" +"2018-02-17,1653\n" +"2018-02-18,1661\n" +"2018-02-19,1665\n" +"2018-02-20,1669\n" +"2018-02-21,1673\n" +"2018-02-22,1676\n" +"2018-02-23,1677\n" +"2018-02-24,1681\n" +"2018-02-25,1683\n" +"2018-02-26,1684\n" +"2018-02-27,1684\n" +"2018-02-28,1689\n" +"2018-03-01,1697\n" +"2018-03-02,1708\n" +"2018-03-03,1716\n" +"2018-03-04,1726\n" +"2018-03-05,1728\n" +"2018-03-06,1735\n" +"2018-03-07,1742\n" +"2018-03-08,1745\n" +"2018-03-09,1751\n" +"2018-03-10,1753\n" +"2018-03-11,1756\n" +"2018-03-12,1758\n" +"2018-03-13,1764\n" +"2018-03-14,1764\n" +"2018-03-15,1770\n" +"2018-03-16,1771\n" +"2018-03-17,1779\n" +"2018-03-18,1780\n" +"2018-03-19,1793\n" +"2018-03-20,1800\n" +"2018-03-21,1809\n" +"2018-03-22,1814\n" +"2018-03-23,1815\n" +"2018-03-24,1820\n" +"2018-03-25,1826\n" +"2018-03-26,1829\n" +"2018-03-27,1831\n" +"2018-03-28,1837\n" +"2018-03-29,1846\n" +"2018-03-30,1854\n" +"2018-03-31,1856\n" +"2018-04-01,1860\n" +"2018-04-02,1861\n" +"2018-04-03,1873\n" +"2018-04-04,1888\n" +"2018-04-05,1898\n" +"2018-04-06,1904\n" +"2018-04-07,1911\n" +"2018-04-08,1922\n" +"2018-04-09,1923\n" +"2018-04-10,1924\n" +"2018-04-11,1928\n" +"2018-04-12,1931\n" +"2018-04-13,1946\n" +"2018-04-14,1949\n" +"2018-04-15,1950\n" +"2018-04-16,1951\n" +"2018-04-17,1953\n" +"2018-04-18,1960\n" +"2018-04-19,1965\n" +"2018-04-20,1982\n" +"2018-04-21,1988\n" +"2018-04-22,1988\n" +"2018-04-23,1995\n" +"2018-04-24,1997\n" +"2018-04-25,2010\n" +"2018-04-27,2021\n" +"2018-04-28,2025\n" +"2018-04-29,2032\n" +"2018-04-30,2038\n" +"2018-05-01,2048\n" +"2018-05-02,2066\n" +"2018-05-03,2068\n" +"2018-05-04,2071\n" +"2018-05-05,2072\n" +"2018-05-06,2076\n" +"2018-05-07,2082\n" +"2018-05-08,2087\n" +"2018-05-09,2089\n" +"2018-05-11,2096\n" +"2018-05-12,2102\n" +"2018-05-13,2107\n" +"2018-05-14,2113\n" +"2018-05-15,2124\n" +"2018-05-16,2129\n" +"2018-05-17,2135\n" +"2018-05-18,2138\n" +"2018-05-19,2138\n" +"2018-05-20,2139\n" +"2018-05-21,2150\n" +"2018-05-22,2156\n" +"2018-05-23,2165\n" +"2018-05-24,2170\n" +"2018-05-25,2175\n" +"2018-05-26,2183\n" +"2018-05-27,2186\n" +"2018-05-28,2196\n" +"2018-05-29,2201\n" +"2018-05-30,2207\n" +"2018-05-31,2219\n" +"2018-06-01,2225\n" +"2018-06-02,2235\n" +"2018-06-03,2238\n" +"2018-06-04,2249\n" +"2018-06-05,2257\n" +"2018-06-06,2257\n" +"2018-06-07,2271\n" +"2018-06-08,2277\n" +"2018-06-09,2284\n" +"2018-06-10,2297\n" +"2018-06-11,2306\n" +"2018-06-12,2320\n" +"2018-06-13,2327\n" +"2018-06-14,2342\n" +"2018-06-15,2356\n" +"2018-06-16,2358\n" +"2018-06-17,2363\n" +"2018-06-18,2368\n" +"2018-06-19,2410\n" +"2018-06-20,2433\n" +"2018-06-21,2436\n" +"2018-06-22,2450\n" +"2018-06-23,2478\n" +"2018-06-24,2489\n" +"2018-06-25,2495\n" +"2018-06-26,2511\n" +"2018-06-27,2528\n" +"2018-06-28,2540\n" +"2018-06-29,2566\n" +"2018-06-30,2593\n" +"2018-07-01,2608\n" +"2018-07-02,2618\n" +"2018-07-03,2653\n" +"2018-07-04,2662\n" +"2018-07-05,2670\n" +"2018-07-06,2681\n" +"2018-07-07,2692\n" +"2018-07-08,2699\n" +"2018-07-09,2714\n" +"2018-07-10,2728\n" +"2018-07-11,2740\n" +"2018-07-12,2750\n" +"2018-07-13,2759\n" +"2018-07-14,2763\n" +"2018-07-15,2772\n" +"2018-07-16,2775\n" +"2018-07-17,2783\n" +"2018-07-18,2787\n" +"2018-07-19,2793\n" +"2018-07-20,2801\n" +"2018-07-21,2813\n" +"2018-07-22,2816\n" +"2018-07-23,2820\n" +"2018-07-24,2837\n" +"2018-07-25,2846\n" +"2018-07-26,2856\n" +"2018-07-27,2869\n" +"2018-07-28,2874\n" +"2018-07-29,2883\n" +"2018-07-30,2885\n" +"2018-07-31,2903\n" +"2018-08-01,2918\n" +"2018-08-02,2923\n" +"2018-08-03,2931\n" +"2018-08-04,2935\n" +"2018-08-05,2943\n" +"2018-08-06,2951\n" +"2018-08-07,2953\n" +"2018-08-08,2961\n" +"2018-08-09,2975\n" +"2018-08-10,2987\n" +"2018-08-11,2998\n" +"2018-08-12,3007\n" +"2018-08-13,3022\n" +"2018-08-14,3029\n" +"2018-08-15,3033\n" +"2018-08-16,3041\n" +"2018-08-17,3049\n" +"2018-08-18,3058\n" +"2018-08-19,3065\n" +"2018-08-20,3078\n" +"2018-08-21,3110\n" +"2018-08-22,3121\n" +"2018-08-23,3138\n" +"2018-08-24,3146\n" +"2018-08-25,3149\n" +"2018-08-26,3152\n" +"2018-08-27,3184\n" +"2018-08-28,3189\n" +"2018-08-29,3201\n" +"2018-08-30,3212\n" +"2018-08-31,3228\n" +"2018-09-01,3241\n" +"2018-09-02,3250\n" +"2018-09-03,3262\n" +"2018-09-04,3278\n" +"2018-09-05,3296\n" +"2018-09-06,3321\n" +"2018-09-07,3331\n" +"2018-09-08,3345\n" +"2018-09-09,3353\n" +"2018-09-10,3359\n" +"2018-09-11,3367\n" +"2018-09-12,3373\n" +"2018-09-13,3385\n" +"2018-09-14,3393\n" +"2018-09-15,3418\n" +"2018-09-16,3438\n" +"2018-09-17,3450\n" +"2018-09-18,3459\n" +"2018-09-19,3475\n" +"2018-09-20,3519\n" +"2018-09-21,3543\n" +"2018-09-22,3559\n" +"2018-09-23,3566\n" +"2018-09-24,3582\n" +"2018-09-25,3602\n" +"2018-09-26,3619\n" +"2018-09-27,3627\n" +"2018-09-28,3638\n" +"2018-09-29,3647\n" +"2018-09-30,3651\n" +"2018-10-01,3659\n" +"2018-10-02,3670\n" +"2018-10-03,3698\n" +"2018-10-04,3711\n" +"2018-10-05,3717\n" +"2018-10-06,3733\n" +"2018-10-11,3786\n" +"2018-10-14,3826\n" +"2018-10-15,3845\n" +"2018-10-16,3848\n" +"2018-10-17,3851\n" +"2018-10-18,3851\n" +"2018-10-19,3851\n" +"2018-10-20,3857\n" +"2018-10-21,3864\n" +"2018-10-22,3884\n" +"2018-10-23,3892\n" +"2018-10-25,3920\n" +"2018-10-26,3947\n" +"2018-10-27,3948\n" +"2018-10-28,3973\n" +"2018-10-29,3999\n" +"2018-11-02,4016\n" +"2018-11-03,4018\n" +"2018-11-04,4020\n" +"2018-11-05,4025\n" +"2018-11-06,4044\n" +"2018-11-07,4054\n" +"2018-11-08,4066\n" +"2018-11-09,4071\n" +"2018-11-11,4101\n" +"2018-11-12,4116\n" +"2018-11-13,4122\n" +"2018-11-14,4134\n" +"2018-11-15,4147\n" +"2018-11-16,4166\n" +"2018-11-17,4178\n" +"2018-11-18,4182\n" +"2018-11-19,4191\n" +"2018-11-20,4205\n" +"2018-11-21,4220\n" +"2018-11-22,4234\n" +"2018-11-23,4239\n" +"2018-11-24,4250\n" +"2018-11-26,4263\n" +"2018-12-01,4322\n" +"2018-12-02,4324\n" +"2018-12-03,4328\n" +"2018-12-04,4338\n" +"2018-12-05,4347\n" +"2018-12-06,4360\n" +"2018-12-07,4373\n" +"2018-12-08,4384\n" +"2018-12-09,4390\n" +"2018-12-10,4395\n" +"2018-12-11,4405\n" +"2018-12-12,4409\n" +"2018-12-13,4425\n" +"2018-12-14,4437\n" +"2018-12-15,4451\n" +"2018-12-16,4464\n" +"2018-12-17,4470\n" +"2018-12-18,4487\n" +"2018-12-19,4502\n" +"2018-12-20,4512\n" +"2018-12-21,4530\n" +"2018-12-22,4541\n" +"2018-12-23,4555\n" +"2018-12-24,4566\n" +"2018-12-25,4573\n" +"2018-12-26,4584\n" +"2018-12-27,4596\n" +"2018-12-28,4612\n" +"2018-12-29,4621\n" +"2018-12-30,4630\n" +"2018-12-31,4634\n" +"2019-01-01,4641\n" +"2019-01-02,4649\n" +"2019-01-03,4665\n" +"2019-01-04,4671\n" +"2019-01-05,4678\n" +"2019-01-06,4690\n" +"2019-01-07,4697\n" +"2019-01-08,4716\n" +"2019-01-09,4728\n" +"2019-01-10,4752\n" +"2019-01-11,4779\n" +"2019-01-12,4794\n" +"2019-01-13,4787\n" +"2019-01-14,4811\n" +"2019-01-15,4829\n" +"2019-01-16,4857\n" +"2019-01-17,4868\n" +"2019-01-18,4883\n" +"2019-01-19,4911\n" +"2019-01-20,4924\n" +"2019-01-21,4933\n" +"2019-01-22,4951\n" +"2019-01-23,4959\n" +"2019-01-24,4976\n" +"2019-01-25,4994\n" +"2019-01-26,5012\n" +"2019-01-27,5028\n" +"2019-01-28,5045\n" +"2019-01-29,5071\n" +"2019-01-30,5087\n" +"2019-01-31,5116\n" +"2019-02-01,5129\n" +"2019-02-02,5152\n" +"2019-02-03,5172\n" +"2019-02-04,5185\n" +"2019-02-05,5199\n" +"2019-02-06,5221\n" +"2019-02-07,5236\n" +"2019-02-10,5268\n" +"2019-02-11,5281\n" +"2019-02-12,5299\n" +"2019-02-13,5319\n" +"2019-02-14,5362\n" +"2019-02-15,5393\n" +"2019-02-16,5478\n" +"2019-02-17,5515\n" +"2019-02-18,5540\n" +"2019-02-19,5597\n" +"2019-02-20,5622\n" +"2019-02-21,5668\n" +"2019-02-22,5697\n" +"2019-02-23,5728\n" +"2019-02-24,5757\n" +"2019-02-25,5787\n" +"2019-02-26,5820\n" +"2019-02-28,5896\n" +"2019-03-01,5920\n" +"2019-03-02,5942\n" +"2019-03-03,5987\n" +"2019-03-04,5989\n" +"2019-03-05,6018\n" +"2019-03-06,6048\n" +"2019-03-07,6085\n" +"2019-03-08,6122\n" +"2019-03-09,6183\n" +"2019-03-10,6272\n" +"2019-03-11,6345\n" +"2019-03-12,6432\n" +"2019-03-13,6479\n" +"2019-03-14,6532\n" +"2019-03-15,6617\n" +"2019-03-16,6640\n" +"2019-03-17,6689\n" +"2019-03-18,6710\n" +"2019-03-19,6730\n" +"2019-03-20,6733\n" +"2019-03-21,6757\n" +"2019-03-22,6770\n" +"2019-03-23,6795\n" , {
-		# 		title: 'Total Tweets Posted for AndrewYang',
-		# 		legend: 'always',
-		# 		ylabel: false,
-		# 		titleHeight: 20,
-		# 		labelsDivStyles: { 'background': 'none', 'margin-top': '-10px', 'text-align': 'right', },
-		# 		strokeWidth: 1,
-		# 		colors: ["#dd2323", "#dd2323", "#dd2323", "#dd2323"],
-		# 		labelsKMB: true,
-		# 		maxNumberWidth: 10
-		# 	}
-		# );
-		# </script>
 
 	# Scraping socialblade.com:
 	driver = webdriver.Chrome('/usr/bin/chromedriver')
@@ -438,6 +416,7 @@ def WebMetrics():
 	# Finds the index of the last /, returns s[last_/_index+1:] for all twitter handles
 	twitter_name_list = [s[s.rfind('/')+1:] for s in twitter_handle_list]
 	print('twitter_name_list:\n', twitter_name_list)
+
 	df_all_names = pd.DataFrame()
 	for i, twitter_name in enumerate(twitter_name_list):
 		url = 'https://socialblade.com/twitter/user/' + twitter_name + '/monthly'
@@ -456,10 +435,9 @@ def WebMetrics():
 				print('dygraph_str', dygraph_str)
 				if 'new Dygraph' in dygraph_str:
 					print('##########################   in for loop')
-					dygraph_str = dygraph_str[dygraph_str.index('\\n" + "'):dygraph_str.rindex('\\n" ')]#-8]
+					dygraph_str = dygraph_str[dygraph_str.index('\\n" + "'):dygraph_str.rindex('\\n" ')]
 					dygraph_str = dygraph_str.replace('\\n" + "','').replace('\\n" +"',',').replace('\\n" ','')
 					dygraph_str = dygraph_str.split(',')
-					#dygraph_str.replace(',','","')
 					print('cleaned dygraph_str:\n', dygraph_str)
 
 					# dygraph_str_re_clean = re.search(',(.*),', dygraph_str)
@@ -485,6 +463,17 @@ def WebMetrics():
 		title_ano_list = [title[:title.find(' for')] for title in title_epo_list]
 		title_list = title_ano_list # Reassigning for shortness
 		print('===============================================title_ano_list:\n', title_ano_list)
+
+		# Using title_epo_list to get full candidate names e.g. 'Andrew Yang' and replace
+		# space to make 'AndrewYang', 'JoeBiden', etc:
+		epo_list = [title[title.find('for')+3:].replace(' ','') for title in title_epo_list]
+		print('epo_list:\n', epo_list)
+		# Use epo_list candidate names for csv filename construction for exporting df,
+		# created downstream. epo_list contains repetitions of one name, select the first:
+		csv_filename_base = '/home/dp/Documents/Campaign/' + 'TwitterMetrics_'
+		csv_filename = csv_filename_base + epo_list[0] + '.csv'
+		print('csv_filename:\n', csv_filename)
+
 
 
 		reshaped_dygraph_cleaned = [np.reshape(l, (int(len(l)/2),2)) for l in dygraph_cleaned]
@@ -543,27 +532,67 @@ def WebMetrics():
 			df_all_names = pd.concat((df_all_names, df), axis=0, sort=True)
 			''' ########################################### '''
 
-	# Adding the 'Name' column to the index (append does this):
-	df_all_names.set_index(['Name'], append=True, inplace=True)
+		''' Creates csv, overwrites the current one of the same name: '''
+		''' --- Only run once, then use append code block below --- '''
+		# Writing percents to csv:
+		df.to_csv(path_or_buf=csv_filename)
 
+	# Adding the 'Name' column to the index (append does this):
+	# Don't need name in the index
+	#df_all_names.set_index(['Name'], append=True, inplace=True)
+	
+	# Export to csv
+	csv_all_filename = csv_filename_base + 'AllCandidates.csv'
+	df_all_names.to_csv(path_or_buf=csv_all_filename)
 	print('df_all_names:\n', df_all_names.to_string())
 
 	# Pickle out:
-    df_all_names_pkl = df_all_names.to_pickle('/home/dp/Documents/Campaign/pickle/df_all_names.pkl')
-
+	df_all_names_pkl = df_all_names.to_pickle('/home/dp/Documents/Campaign/pickle/df_all_names.pkl')
+	
 	driver.quit()
+
 	return dygraph_elements_list
+
 
 def PlotWebMetrics():
 	df = pd.read_pickle('/home/dp/Documents/Campaign/pickle/df_all_names.pkl')
-	# Plotting:
-	plt.figure()
-	plt.plot(df.index, df['Daily Followers Gained'], linewidth=2, marker='o', markersize=3, markerfacecolor='white')
+	# df.reset_index(inplace=True)
+	# df.set_index('Date', inplace=True)
+	# df.sort_index(inplace=True)
+	df.reset_index(inplace=True)
+	#rint('df:\n', df.to_string())
+	
+	plt.close()
+
+	# Dropping Donald Trump from df:
+	df_no_dt_index = df[df['Name']=='realDonaldTrump'].index
+	df.drop(df_no_dt_index, inplace=True)
+	print('***************************************8df:\n', df.to_string())
+
+	# Line plots
+	cols = [col for col in df.columns if col != 'Name' and col != 'Date']
+	print('cols:\n', cols)
+	for title in cols:
+		fig, ax = plt.subplots(figsize=(8,6))
+		for label, d in df.groupby('Name'):
+			d.plot(x='Date', y=title, kind='line', ax=ax, label=label, title=title)
+		plt.legend(); plt.xlabel('Date'); plt.ylabel(title)
+		plt.savefig('TwitterMetrics '+title, bbox_inches='tight')
+
+	# Boxplot of Daily Followers Gained:
+	df.boxplot(column='Daily Followers Gained', by='Name')#; plt.xlabel('Date'); plt.ylabel('Daily Followers Gained')
+	plt.xticks(rotation='vertical'); plt.ylabel('Daily Followers Gained')
+	plt.savefig('TwitterMetrics Daily Followers Gained Boxplot', bbox_inches='tight')
 	plt.show()
 
-	plt.figure()
-	plt.plot(df.index, df['Total Follower Count'], linewidth=2, marker='o', markersize=3, markerfacecolor='white', markeredgecolor='red')
-	plt.show()
+	# # Plotting:
+	# plt.figure()
+	# plt.plot(df.index, df['Daily Followers Gained'], linewidth=2, marker='o', markersize=3, markerfacecolor='white')
+	# plt.show()
+
+	# plt.figure()
+	# plt.plot(df.index, df['Total Follower Count'], linewidth=2, marker='o', markersize=3, markerfacecolor='white', markeredgecolor='red')
+	# plt.show()
 
 	return
 		
@@ -624,6 +653,6 @@ def PlotWebMetrics():
 ''' ----------------------------------------- WebMetrics() ----------------------------------------- '''
 
 ''' --- Run CampaignBetting() --- '''
-df_all = WebMetrics()
+# df_all = WebMetrics()
 PlotWebMetrics()
 ''' ----------------------------- '''
