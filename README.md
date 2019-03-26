@@ -5,7 +5,7 @@ Scraping betting odds for the 2020 presidential campaign, specifically Democrati
 
 Other metrics to include:
 1. Internet traffic. Can be measured with API calls to Google.
-2. Unique donations. Unique donation numbers require voluntary disclosure by each candidate, can't be gathered hourly.
+2. Unique donations. Unique donation numbers require voluntary disclosure by each candidate, can't be gathered sub-monthly.
 3. Media engagements. These can drive support and donor numbers considerably by reaching many viewers.
 4. Campaign stop locations.
 
