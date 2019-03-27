@@ -1,5 +1,5 @@
 # 2020-campaign
-Somehow, the 2020 presidential campaign is already upon us. This project's goal is exploring presdiential campaign data, plotting it, and looking for trends and correlations between campaign movements on the ground and various outcome metrics such as betting odds and poll results.
+The 2020 presidential campaign is upon us. This project's goal is exploring presidential campaign data, plotting it, and looking for trends and correlations between campaign movements on the ground and various outcome metrics such as betting odds and poll results.
 
 Scraping betting odds for the 2020 presidential campaign, specifically Democratic and Republican primary winners, and the presidential race winner. Plots of odds over time are made for each betting line, and more lines will be included as they're made available.
 
