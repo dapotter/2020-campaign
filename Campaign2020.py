@@ -78,6 +78,9 @@ def DonorCounter():
 	
 	print('Donor Count df:\n', df.to_string())
 
+	# Pickle out:
+	DonorCountYang_df_pkl = df.to_pickle('/home/dp/Documents/Campaign/pickle/DonorCountYang_df.pkl')
+
 	# ''' Plotting data: '''
 	#fig = plt.figure()
 	w = 3
@@ -316,44 +319,88 @@ def CampaignBetting():
 	df_rep_field = df_rep_field.append(rep_fields, ignore_index=True)
 	df_pres_field = df_pres_field.append(pres_dict, ignore_index=True)
 
+	# Pickle out:
+	BettingOdds_df_dem_odds_pkl = df_dem.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_dem_odds.pkl')
+	BettingOdds_df_rep_odds_pkl = df_rep.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_rep_odds.pkl')
+	BettingOdds_df_pres_odds_pkl = df_pres.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_pres_odds.pkl')
+	BettingOdds_df_dem_field_pkl = df_dem_field.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_dem_field.pkl')
+	BettingOdds_df_rep_field_pkl = df_rep_field.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_rep_field.pkl')
+	BettingOdds_df_pres_field_pkl = df_pres_field.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_pres_field.pkl')
+
 	# Close driver:
 	driver.quit()
 
-	plt.close()
 
-	df_dem_no_time = df_dem.drop(columns=['Time','Yang','Biden'])
-	cols = df_dem_no_time.columns
-	ax = df_dem.plot(x='Time', y='Yang', color='b', linewidth=2, markersize=5, marker='o', markeredgecolor='b', markerfacecolor='white')
-	df_dem.plot(x='Time', y='Biden', ax=ax, color='g', linewidth=2, markersize=5, marker='o', markeredgecolor='g', markerfacecolor='white')
-	df_dem.plot(x='Time', y=cols, ax=ax)
-	plt.xlabel('Datetime'); plt.ylabel('Betting odds, %'); plt.legend(loc='best')#center right', bbox_to_anchor=(0.7, 0.1, 0.5, 0.5))
-	# Doesn't help the axis display: plt.xticks(rotation='vertical')
-	plt.savefig('Betting Odds - Democratic Primary.png', bbox_inches='tight')
-	plt.show()
-
-	df_rep_no_time = df_rep.drop(columns=['Time','Trump','Pence'])
-	cols = df_rep_no_time.columns
-	ax = df_rep.plot(x='Time', y='Trump', color='r', linewidth=2, markersize=5, marker='o', markeredgecolor='r', markerfacecolor='white')
-	df_rep.plot(x='Time', y='Pence', ax=ax, color='g', linewidth=2, markersize=5, marker='o', markeredgecolor='g', markerfacecolor='white')
-	df_rep.plot(x='Time', y=cols, ax=ax)
-	plt.xlabel('Datetime'); plt.ylabel('Betting odds, %'); plt.legend(loc='best')#center right', bbox_to_anchor=(0.7, 0.1, 0.5, 0.5))
-	# Doesn't help the axis display: plt.xticks(rotation='vertical')
-	plt.savefig('Betting Odds - Republican Primary.png', bbox_inches='tight')
-	plt.show()
-
-	df_pres_no_time = df_pres.drop(columns=['Time','Biden','Yang','Trump'])
-	#df_pres_top8_no_time = df_pres_no_time.sort_values(axis=0)
-	cols = df_pres_no_time.columns
-	ax = df_dem.plot(x='Time', y='Yang', color='b', linewidth=2, markersize=5, marker='o', markeredgecolor='b', markerfacecolor='white')
-	df_pres.plot(x='Time', y='Trump', ax=ax, color='r', linewidth=2, markersize=5, marker='o', markeredgecolor='r', markerfacecolor='white')
-	df_pres.plot(x='Time', y='Biden', ax=ax, color='g', linewidth=2, markersize=5, marker='o', markeredgecolor='g', markerfacecolor='white')
-	df_pres.plot(x='Time', y=cols, ax=ax)
-	plt.xlabel('Datetime'); plt.ylabel('Betting odds, %'); plt.legend(loc='best')#center right', bbox_to_anchor=(0.7, 0.1, 0.5, 0.5))
-	# Doesn't help the axis display: plt.xticks(rotation='vertical')
-	plt.savefig('Betting Odds - Presidential Race.png', bbox_inches='tight')
-	plt.show()
 
 	return df_dem, df_rep, df_pres, df_dem_field, df_rep_field, df_pres_field
+
+
+def PlotCampaignBetting():
+
+	# # Individual matplotlib plots, replaced by pandas single plot below
+	# df_dem_no_time = df_dem.drop(columns=['Time','Yang','Biden'])
+	# cols = df_dem_no_time.columns
+	# ax = df_dem.plot(x='Time', y='Yang', color='b', linewidth=2, markersize=5, marker='o', markeredgecolor='b', markerfacecolor='white')
+	# df_dem.plot(x='Time', y='Biden', ax=ax, color='g', linewidth=2, markersize=5, marker='o', markeredgecolor='g', markerfacecolor='white')
+	# df_dem.plot(x='Time', y=cols, ax=ax)
+	# plt.xlabel('Datetime'); plt.ylabel('Betting odds, %'); plt.legend(loc='best')#center right', bbox_to_anchor=(0.7, 0.1, 0.5, 0.5))
+	# # Doesn't help the axis display: plt.xticks(rotation='vertical')
+	# plt.savefig('Betting Odds - Democratic Primary.png', bbox_inches='tight')
+	# plt.show()
+
+	# df_rep_no_time = df_rep.drop(columns=['Time','Trump','Pence'])
+	# cols = df_rep_no_time.columns
+	# ax = df_rep.plot(x='Time', y='Trump', color='r', linewidth=2, markersize=5, marker='o', markeredgecolor='r', markerfacecolor='white')
+	# df_rep.plot(x='Time', y='Pence', ax=ax, color='g', linewidth=2, markersize=5, marker='o', markeredgecolor='g', markerfacecolor='white')
+	# df_rep.plot(x='Time', y=cols, ax=ax)
+	# plt.xlabel('Datetime'); plt.ylabel('Betting odds, %'); plt.legend(loc='best')#center right', bbox_to_anchor=(0.7, 0.1, 0.5, 0.5))
+	# # Doesn't help the axis display: plt.xticks(rotation='vertical')
+	# plt.savefig('Betting Odds - Republican Primary.png', bbox_inches='tight')
+	# plt.show()
+
+	# df_pres_no_time = df_pres.drop(columns=['Time','Biden','Yang','Trump'])
+	# #df_pres_top8_no_time = df_pres_no_time.sort_values(axis=0)
+	# cols = df_pres_no_time.columns
+	# ax = df_dem.plot(x='Time', y='Yang', color='b', linewidth=2, markersize=5, marker='o', markeredgecolor='b', markerfacecolor='white')
+	# df_pres.plot(x='Time', y='Trump', ax=ax, color='r', linewidth=2, markersize=5, marker='o', markeredgecolor='r', markerfacecolor='white')
+	# df_pres.plot(x='Time', y='Biden', ax=ax, color='g', linewidth=2, markersize=5, marker='o', markeredgecolor='g', markerfacecolor='white')
+	# df_pres.plot(x='Time', y=cols, ax=ax)
+	# plt.xlabel('Datetime'); plt.ylabel('Betting odds, %'); plt.legend(loc='best')#center right', bbox_to_anchor=(0.7, 0.1, 0.5, 0.5))
+	# # Doesn't help the axis display: plt.xticks(rotation='vertical')
+	# plt.savefig('Betting Odds - Presidential Race.png', bbox_inches='tight')
+	# plt.show()
+
+	df_dem_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_dem_odds.pkl')
+	df_rep_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_rep_odds.pkl')
+	df_pres_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_pres_odds.pkl')
+	
+	df_dem_odds.set_index('Time', inplace=True)
+	df_rep_odds.set_index('Time', inplace=True)
+	df_pres_odds.set_index('Time', inplace=True)
+
+	# Filtering the top 3%, 8% and 5% of the dem, rep and pres odds to make legend manageable
+	# Mask the odds dataframes, grab True values, drop all nan columns:
+	df_dem_odds_top = df_dem_odds[df_dem_odds.gt(3)].dropna(axis=1)
+	#print('df_dem_odds_top:\n', df_dem_odds_top.to_string())
+	df_rep_odds_top = df_rep_odds[df_rep_odds.gt(8)].dropna(axis=1)
+	df_pres_odds_top = df_pres_odds[df_pres_odds.gt(5)].dropna(axis=1)
+
+	dem_odds_cols = df_dem_odds_top.columns
+	rep_odds_cols = df_rep_odds_top.columns
+	pres_odds_cols = df_pres_odds_top.columns
+
+	plt.close()
+
+	# Pandas plotting of odds data for all three races:
+	fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(8,4))
+	print('ax:\n', ax); print('fig:\n', fig)
+	df_dem_odds_top.plot(y=dem_odds_cols, use_index=True, ax=ax[0]); ax[0].set_ylabel('Odds, %')
+	df_rep_odds_top.plot(y=rep_odds_cols, use_index=True, ax=ax[1])
+	df_pres_odds_top.plot(y=pres_odds_cols, use_index=True, ax=ax[2])
+	plt.savefig('Betting Odds - All Races.png', bbox_inches='tight')
+	plt.show()
+
+	return
 
 
 
@@ -414,12 +461,12 @@ def WebMetrics():
 							'https://twitter.com/amyklobuchar', 'https://twitter.com/realDonaldTrump']
 
 	# Finds the index of the last /, returns s[last_/_index+1:] for all twitter handles
-	twitter_name_list = [s[s.rfind('/')+1:] for s in twitter_handle_list]
-	print('twitter_name_list:\n', twitter_name_list)
+	twitter_candidate_list = [s[s.rfind('/')+1:] for s in twitter_handle_list]
+	print('twitter_candidate_list:\n', twitter_candidate_list)
 
-	df_all_names = pd.DataFrame()
-	for i, twitter_name in enumerate(twitter_name_list):
-		url = 'https://socialblade.com/twitter/user/' + twitter_name + '/monthly'
+	df_all_candidates = pd.DataFrame()
+	for i, twitter_candidate in enumerate(twitter_candidate_list):
+		url = 'https://socialblade.com/twitter/user/' + twitter_candidate + '/monthly'
 		print('url:', url)
 		driver.get(url)
 		time.sleep(5) # Allow the user see website load
@@ -454,7 +501,7 @@ def WebMetrics():
 
 		# Getting the graph titles:
 		title_elements = driver.find_elements_by_xpath('//div[@class="dygraph-label dygraph-title"]')
-		replacement_str = ' for ' + twitter_name
+		replacement_str = ' for ' + twitter_candidate
 
 		# Eponymous and anonymous lists:
 		# Epo: ['Daily Followers Gained for Joe Biden','Total Followers for Joe Biden',...]
@@ -480,7 +527,7 @@ def WebMetrics():
 		print('reshaped_dygraph_cleaned:\n', reshaped_dygraph_cleaned)
 		print('reshaped_dygraph_cleaned[0]:\n', reshaped_dygraph_cleaned[0])
 
-		# date_name_title_list will be used for column titles:
+		# date_candidate_title_list will be used for column titles:
 		# e.g. [['2019-02-28','AndrewYang','Daily Followers Gained'], ['2019-02-29','AndrewYang','Daily Followers Gained'], ...]
 		date_list = ['Date']*len(title_list)
 		date_title_list = [[date,title] for date,title in zip(date_list,title_list)]
@@ -491,7 +538,7 @@ def WebMetrics():
 
 		# Need to make name list for each reshaped dygraph numpy array:
 		#l,r,c = np.shape(x)
-		#name_list = np.full((l,r,1), twitter_name)
+		#name_list = np.full((l,r,1), twitter_candidate)
 		#Attaching name columns to data arrays:
 		#data_arr = [np.hstack(d,n) for d,n in zip(data_arr,name_list)]
 
@@ -509,7 +556,7 @@ def WebMetrics():
 
 		# Append name list ['AndrewYang','AndrewYang',...] once the final shape of
 		# the dataframe is established:
-		name_list = [twitter_name]*len(df)
+		name_list = [twitter_candidate]*len(df)
 		print('name_list:\n', name_list)
 		name_series = pd.Series(data=name_list)
 
@@ -527,9 +574,9 @@ def WebMetrics():
 
 		if i == 0:
 			# df_all_synvar_grid_interp contains all grid interpolated synoptic variables
-			df_all_names = df_all_names.append(df)
+			df_all_candidates = df_all_candidates.append(df)
 		else:
-			df_all_names = pd.concat((df_all_names, df), axis=0, sort=True)
+			df_all_candidates = pd.concat((df_all_candidates, df), axis=0, sort=True)
 			''' ########################################### '''
 
 		''' Creates csv, overwrites the current one of the same name: '''
@@ -539,15 +586,15 @@ def WebMetrics():
 
 	# Adding the 'Name' column to the index (append does this):
 	# Don't need name in the index
-	#df_all_names.set_index(['Name'], append=True, inplace=True)
+	#df_all_candidates.set_index(['Name'], append=True, inplace=True)
 	
 	# Export to csv
 	csv_all_filename = csv_filename_base + 'AllCandidates.csv'
-	df_all_names.to_csv(path_or_buf=csv_all_filename)
-	print('df_all_names:\n', df_all_names.to_string())
+	df_all_candidates.to_csv(path_or_buf=csv_all_filename)
+	print('df_all_candidates:\n', df_all_candidates.to_string())
 
 	# Pickle out:
-	df_all_names_pkl = df_all_names.to_pickle('/home/dp/Documents/Campaign/pickle/df_all_names.pkl')
+	TwitterMetrics_df_all_candidates_pkl = df_all_candidates.to_pickle('/home/dp/Documents/Campaign/pickle/TwitterMetrics_df_all_candidates.pkl')
 	
 	driver.quit()
 
@@ -555,7 +602,7 @@ def WebMetrics():
 
 
 def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
-	df = pd.read_pickle('/home/dp/Documents/Campaign/pickle/df_all_names.pkl')
+	df = pd.read_pickle('/home/dp/Documents/Campaign/pickle/TwitterMetrics_df_all_candidates.pkl')
 	# df.reset_index(inplace=True)
 	# df.set_index('Date', inplace=True)
 	# df.sort_index(inplace=True)
@@ -666,7 +713,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 		elif name == 'CoryBooker':
 			last_name_list.append('Booker')
 		elif name == 'PeteButtigieg':
-			last_name_list.append('PeteButtigieg')
+			last_name_list.append('Buttigieg')
 		elif name == 'amyklobuchar':
 			last_name_list.append('Klobuchar')
 
@@ -682,16 +729,6 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 	df_all_pcnt_growth.columns = start_end_str_list
 	print('df_all_pcnt_growth:\n', df_all_pcnt_growth.to_string())
-
-		# Zip through the dataframe adding 1 to each element, returns
-		# a numpy array into a dataframe for you.
-		# def my_compute(x):
-	 #    	return x + 1
-		# """ Use enumerate function to iterate"""
-	 #    b = np.empty(len(dataset))
-	 #    for i, (x) in enumerate(zip(df[col_of_interest])):
-	 #        b[i] = my_compute(x[0])
-	 #    dataset['b'] = b
 	
 	plt.close()
 	label = df_pcnt_growth.index
@@ -756,12 +793,16 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 ''' --- Run CampaignBetting() --- '''
 #df_dem, df_rep, df_pres, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
+PlotCampaignBetting()
 ''' --------------------------- '''
 
 
 ''' ----------------------------------------- WebMetrics() ----------------------------------------- '''
 
 ''' --- Run CampaignBetting() --- '''
-# df_all = WebMetrics()
-PlotWebMetrics(['2019,3,1','2019,3,8','2019,3,15','2019,3,22'],['2019,3,8','2019,3,15','2019,3,22','2019,3,25'])
+# df_all = WebMetrics() # WARNING: RUNNING THIS WILL NOT UPDATE CURRENT CSV DATA BUT WILL OVERWRITE IT WITH
+						# THE LATEST 30 DAYS OF TWITTER DATA. CURRENT CSV FILES ARE BACKED UP IN THE
+						# FOLDER 'Campaign/TwitterMetrics csv backup'. WebMetrics() NEEDS THE CAPABILITY
+						# TO LOAD CSV DATA, ADD THE MOST RECENT SCRAPED DATA TO IT AND WRITE BACK TO CSV.
+#PlotWebMetrics(['2019,3,1','2019,3,8','2019,3,15','2019,3,22'],['2019,3,8','2019,3,15','2019,3,22','2019,3,25'])
 ''' ----------------------------- '''
