@@ -7,7 +7,7 @@ Other metrics to include:
 1. Internet traffic. Can be measured with API calls to Google.
 2. Unique donations. Unique donation numbers require voluntary disclosure by each candidate, can't be gathered sub-monthly.
 3. Media engagements. These can drive support and donor numbers considerably by reaching many viewers.
-4. Campaign stop locations.
+4. Campaign stop locations. Scrape email newsletters from all candidates for planned campaign stops.
 
 All of the above can be plotted over a basemap of U.S. states, counties or House districts, and will show where candidates are focusing their efforts relative to voter variables.
 
