@@ -470,7 +470,7 @@ def WebMetrics():
 		print('epo_list:\n', epo_list)
 		# Use epo_list candidate names for csv filename construction for exporting df,
 		# created downstream. epo_list contains repetitions of one name, select the first:
-		csv_filename_base = '/home/dp/Documents/Campaign/' + 'TwitterMetrics_'
+		csv_filename_base = '/home/dp/Documents/Campaign/Plots/' + 'TwitterMetrics_'
 		csv_filename = csv_filename_base + epo_list[0] + '.csv'
 		print('csv_filename:\n', csv_filename)
 
@@ -554,7 +554,7 @@ def WebMetrics():
 	return dygraph_elements_list
 
 
-def PlotWebMetrics():
+def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 	df = pd.read_pickle('/home/dp/Documents/Campaign/pickle/df_all_names.pkl')
 	# df.reset_index(inplace=True)
 	# df.set_index('Date', inplace=True)
@@ -567,34 +567,143 @@ def PlotWebMetrics():
 	# Dropping Donald Trump from df:
 	df_no_dt_index = df[df['Name']=='realDonaldTrump'].index
 	df.drop(df_no_dt_index, inplace=True)
-	print('***************************************8df:\n', df.to_string())
+	print('***************************************df:\n', df.to_string())
 
-	# Line plots
-	cols = [col for col in df.columns if col != 'Name' and col != 'Date']
-	print('cols:\n', cols)
-	for title in cols:
-		fig, ax = plt.subplots(figsize=(8,6))
-		for label, d in df.groupby('Name'):
-			d.plot(x='Date', y=title, kind='line', ax=ax, label=label, title=title)
-		plt.legend(); plt.xlabel('Date'); plt.ylabel(title)
-		plt.savefig('TwitterMetrics '+title, bbox_inches='tight')
+	# # Line plots
+	# cols = [col for col in df.columns if col != 'Name' and col != 'Date']
+	# print('cols:\n', cols)
+	# for title in cols:
+	# 	fig, ax = plt.subplots(figsize=(8,6))
+	# 	for label, d in df.groupby('Name'):
+	# 		d.plot(x='Date', y=title, kind='line', ax=ax, label=label, title=title)
+	# 	plt.legend(); plt.xlabel('Date'); plt.ylabel(title)
+	# 	plt.savefig('TwitterMetrics '+title, bbox_inches='tight')
 
-	# Boxplot of Daily Followers Gained:
-	df.boxplot(column='Daily Followers Gained', by='Name')#; plt.xlabel('Date'); plt.ylabel('Daily Followers Gained')
-	plt.xticks(rotation='vertical'); plt.ylabel('Daily Followers Gained')
-	plt.savefig('TwitterMetrics Daily Followers Gained Boxplot', bbox_inches='tight')
+	# # Boxplot of Daily Followers Gained:
+	# df.boxplot(column='Daily Followers Gained', by='Name')#; plt.xlabel('Date'); plt.ylabel('Daily Followers Gained')
+	# plt.xticks(rotation='vertical'); plt.ylabel('Daily Followers Gained')
+	# plt.savefig('TwitterMetrics Daily Followers Gained Boxplot', bbox_inches='tight')
+	# plt.show()
+
+	''' Plotting % Growth: '''
+	# convert timedelta_str to timedelta object
+	# subtract timedelta from current date
+	# get all data from df['Total Follower Count'].loc[start_date:end_date] grouped by name
+	# plot bar plot
+	
+	# Creating list of previous dates to calculate percent growth time period:
+	dates_start_list = [datetime.datetime.strptime(date_str, '%Y,%m,%d') for date_str in datepoints_start_list]
+	date_start_objects_list = [pd.Timestamp(d) for d in dates_start_list]
+	print('date_start_objects_list:\n', date_start_objects_list)
+	dates_end_list = [datetime.datetime.strptime(date_str, '%Y,%m,%d') for date_str in datepoints_end_list]
+	date_end_objects_list = [pd.Timestamp(d) for d in dates_end_list]
+	print('date_end_objects_list:\n', date_end_objects_list)
+
+	# In this loop, date_end_objects_list and date_start_objects_list[0]
+	# are used to select data at two timepoints and calculate percent growth.
+	# Variable of interest is pcnt growth in total followers gained.
+	# Example end date - start date = 2019-3-8 - 2019-3-1
+	df_all_pcnt_growth = pd.DataFrame()
+	i_list = list(range(0,len(date_start_objects_list)))
+	for i, start, end in zip(i_list, date_start_objects_list, date_end_objects_list):
+		# Creating a dataframe groupby object  (won't print, not a dataframe) with embedded groups,
+		# need to iterate through it.
+		col_of_interest = 'Total Follower Count'
+		df_grouped = df[['Date','Name',col_of_interest]].groupby('Name')
+		print('df_grouped:\n', df_grouped)
+
+		''' Need to drop rows to get only the start and end of each time period's
+			data for each candidate for the column 'Daily Followers Gained'.
+			The process is:
+			1) Create an index object of all rows that match the start or the end
+			   time are found and then their indices stored.
+			2) Use the index object to drop those indices from the dataframe. '''
+		# 1) Creates an index object:
+		df_grouped_ind_to_drop = df[(df['Date']!=start) & (df['Date']!=end)].index
+		print('df_grouped_ind_to_drop:\n', df_grouped_ind_to_drop)
+		# 2) Drops the rows (using chain indexing, can I avoid this?)
+		df_grouped_dropped = df.drop(df_grouped_ind_to_drop)[['Name',col_of_interest]]# for df in df_grouped]
+		print('df grouped dropped:\n', df_grouped_dropped.to_string())
+
+		''' As an exercise, the above will be repeated, but instead of creating an
+			index object, it should be possible to use the critera for selecting
+			the data and selecting the data itself in one step (no need to create 
+			an index object and then delete indices):
+			1) Select dataframe based on logical critera (using chain indexing, can I avoid this?) '''
+		df_start = df[(df['Date']==start)][['Name',col_of_interest]]
+		df_end = df[df['Date']==end][['Name',col_of_interest]]
+		df_start.set_index('Name', inplace=True)
+		df_end.set_index('Name', inplace=True)
+		print('df_start:\n', df_start.to_string())
+		print('df_end:\n', df_end.to_string())
+
+		# Calculate percent growth by subtracting start time from end time
+		# dataframe, dividing by the start time dataframe, multiply by 100
+		df_pcnt_growth = ((df_end - df_start) / df_start)*100
+		print('df_pcnt_growth:\n', df_pcnt_growth)
+
+		if i == 0:
+			df_all_pcnt_growth = df_all_pcnt_growth.append(df_pcnt_growth)
+		else:
+			df_all_pcnt_growth = pd.concat((df_all_pcnt_growth,df_pcnt_growth), axis=1, sort=True)
+
+	# [NEEDS TO BE FIXED] THESE NAMES NEED TO BE DERIVED FROM WebMetrics() 
+	# ABOVE. DOING MANUAL CORRECTION HERE:
+	last_name_list = []
+	for name in df_all_pcnt_growth.index:
+		if name == 'AndrewYang':
+			last_name_list.append('Yang')
+		elif name == 'joebiden':
+			last_name_list.append('Biden')
+		elif name == 'TulsiGabbard':
+			last_name_list.append('Gabbard')
+		elif name == 'BernieSanders':
+			last_name_list.append('Sanders')
+		elif name == 'ewarren':
+			last_name_list.append('Warren')
+		elif name == 'BetoORourke':
+			last_name_list.append('ORourke')
+		elif name == 'CoryBooker':
+			last_name_list.append('Booker')
+		elif name == 'PeteButtigieg':
+			last_name_list.append('PeteButtigieg')
+		elif name == 'amyklobuchar':
+			last_name_list.append('Klobuchar')
+
+	print('last_name_list:\n', last_name_list)
+	df_all_pcnt_growth.index = last_name_list
+
+	# Making legend date ranges for pandas bar plot, e.g. 'Mar 1 - Mar 8'
+	start_str_list = [datetime.datetime.strftime(d, '%b %d') for d in date_start_objects_list]
+	end_str_list = [datetime.datetime.strftime(d, '%b %d %Y') for d in date_end_objects_list]
+	print('start_str_list:\n', start_str_list)
+	print('end_str_list:\n', end_str_list)
+	start_end_str_list = [s+' - '+e for s,e in zip(start_str_list, end_str_list)]
+
+	df_all_pcnt_growth.columns = start_end_str_list
+	print('df_all_pcnt_growth:\n', df_all_pcnt_growth.to_string())
+
+		# Zip through the dataframe adding 1 to each element, returns
+		# a numpy array into a dataframe for you.
+		# def my_compute(x):
+	 #    	return x + 1
+		# """ Use enumerate function to iterate"""
+	 #    b = np.empty(len(dataset))
+	 #    for i, (x) in enumerate(zip(df[col_of_interest])):
+	 #        b[i] = my_compute(x[0])
+	 #    dataset['b'] = b
+	
+	plt.close()
+	label = df_pcnt_growth.index
+	title = col_of_interest
+	ind = df_pcnt_growth.index
+	fig, ax = plt.subplots(figsize=(6,6))
+	ax = df_all_pcnt_growth.plot.bar(title=title, rot=45)#x=ind, y=col_of_interest, label=label, title=title)
+	plt.xlabel('Candidates'); plt.ylabel('% Growth')
+	plt.savefig('TwitterMetrics - % Growth.png', bbox_inches='tight')
 	plt.show()
 
-	# # Plotting:
-	# plt.figure()
-	# plt.plot(df.index, df['Daily Followers Gained'], linewidth=2, marker='o', markersize=3, markerfacecolor='white')
-	# plt.show()
-
-	# plt.figure()
-	# plt.plot(df.index, df['Total Follower Count'], linewidth=2, marker='o', markersize=3, markerfacecolor='white', markeredgecolor='red')
-	# plt.show()
-
-	return
+	return ax
 		
 		# # Filtering: unfiltered_name_list contains candidate names and instances of 'green' and 'red'
 		# unfiltered_name_list = [s.replace('https://electionbettingodds.com/','').replace('.png','') for s in img_elements_list if '/' in s]
@@ -654,5 +763,5 @@ def PlotWebMetrics():
 
 ''' --- Run CampaignBetting() --- '''
 # df_all = WebMetrics()
-PlotWebMetrics()
+PlotWebMetrics(['2019,3,1','2019,3,8','2019,3,15','2019,3,22'],['2019,3,8','2019,3,15','2019,3,22','2019,3,25'])
 ''' ----------------------------- '''
