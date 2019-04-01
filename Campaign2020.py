@@ -34,7 +34,7 @@ def DonorCounter():
 	#driver = webdriver.Chrome('/home/dp/Downloads/')  # Optional argument, if not specified will search path.
 	url = 'https://www.yang2020.com/'
 	driver.get(url)
-	time.sleep(1) # Allow the user see website load
+	time.sleep(3) # Allow the user see website load
 	donor_count_str = driver.find_element_by_class_name('donor-count-number').text
 	donor_goal_str = driver.find_element_by_css_selector('.total.goal').text
 	donor_count = int(float(donor_count_str.replace(',','')))
@@ -373,17 +373,19 @@ def PlotCampaignBetting():
 	df_dem_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_dem_odds.pkl')
 	df_rep_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_rep_odds.pkl')
 	df_pres_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_pres_odds.pkl')
+
+	print('df_dem_odds pickle in:\n', df_dem_odds.to_string())
 	
 	df_dem_odds.set_index('Time', inplace=True)
 	df_rep_odds.set_index('Time', inplace=True)
 	df_pres_odds.set_index('Time', inplace=True)
 
 	# Filtering the top 3%, 8% and 5% of the dem, rep and pres odds to make legend manageable
-	# Mask the odds dataframes, grab True values, drop all nan columns:
-	df_dem_odds_top = df_dem_odds[df_dem_odds.gt(3)].dropna(axis=1)
-	#print('df_dem_odds_top:\n', df_dem_odds_top.to_string())
-	df_rep_odds_top = df_rep_odds[df_rep_odds.gt(8)].dropna(axis=1)
-	df_pres_odds_top = df_pres_odds[df_pres_odds.gt(5)].dropna(axis=1)
+	# Mask the odds dataframes, resulting in all values below 3% to be turned to nans,
+	# grab values abot 3%, drop all columns that are entirely nans:
+	df_dem_odds_top = df_dem_odds[df_dem_odds.gt(3.5)].dropna(axis=1, how='all')
+	df_rep_odds_top = df_rep_odds[df_rep_odds.gt(8)].dropna(axis=1, how='all')
+	df_pres_odds_top = df_pres_odds[df_pres_odds.gt(5)].dropna(axis=1, how='all')
 
 	dem_odds_cols = df_dem_odds_top.columns
 	rep_odds_cols = df_rep_odds_top.columns
@@ -394,9 +396,9 @@ def PlotCampaignBetting():
 	# Pandas plotting of odds data for all three races:
 	fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(8,4))
 	print('ax:\n', ax); print('fig:\n', fig)
-	df_dem_odds_top.plot(y=dem_odds_cols, use_index=True, ax=ax[0]); ax[0].set_ylabel('Odds, %')
-	df_rep_odds_top.plot(y=rep_odds_cols, use_index=True, ax=ax[1])
-	df_pres_odds_top.plot(y=pres_odds_cols, use_index=True, ax=ax[2])
+	df_dem_odds_top.plot(y=dem_odds_cols, use_index=True, title='Democratic Primary', ax=ax[0]); ax[0].set_ylabel('Odds, %')
+	df_rep_odds_top.plot(y=rep_odds_cols, use_index=True, title='Republican Primary', ax=ax[1])
+	df_pres_odds_top.plot(y=pres_odds_cols, use_index=True, title='Presidential Race', ax=ax[2])
 	plt.savefig('Betting Odds - All Races.png', bbox_inches='tight')
 	plt.show()
 
@@ -767,7 +769,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 
 ''' --- Run DonorCounter() --- '''
-#df = DonorCounter()
+# df = DonorCounter()
 ''' -------------------------- '''
 
 
@@ -792,14 +794,14 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 ''' ------------------------------------------------------------------ '''
 
 ''' --- Run CampaignBetting() --- '''
-#df_dem, df_rep, df_pres, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
+df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
 PlotCampaignBetting()
 ''' --------------------------- '''
 
 
 ''' ----------------------------------------- WebMetrics() ----------------------------------------- '''
 
-''' --- Run CampaignBetting() --- '''
+''' --- Run WebMetrics() --- '''
 # df_all = WebMetrics() # WARNING: RUNNING THIS WILL NOT UPDATE CURRENT CSV DATA BUT WILL OVERWRITE IT WITH
 						# THE LATEST 30 DAYS OF TWITTER DATA. CURRENT CSV FILES ARE BACKED UP IN THE
 						# FOLDER 'Campaign/TwitterMetrics csv backup'. WebMetrics() NEEDS THE CAPABILITY
