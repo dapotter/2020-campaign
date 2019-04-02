@@ -132,14 +132,17 @@ def CampaignBetting():
 	name_list = [i for i in unfiltered_name_list if 'red' not in i and 'green' not in i]
 	# print('name_list:\n', name_list)
 
-	#--- Getting betting percentiles:
+	#--- Getting betting percentiles, putting them into pcnt_list:
 	bet_percentiles = driver.find_elements_by_xpath("//p[@style='font-size: 55pt; margin-bottom:-10px']")
 	pcnt_list = [float(pcnt.get_attribute('innerHTML').replace('%','')) for pcnt in bet_percentiles]
 	
+	# Close driver:
+	driver.quit()
+
 	num_names = len(name_list)
 	num_pcnts = len(pcnt_list)
 	if num_names != num_pcnts:
-		print('!!!!!!!!!!!! Warning: number of candidates does not match number of percentiles')
+		print('!!!!!!!!!!!! Warning: number of candidates does not match number of percentiles\n\n\n\n\n\n\n\n')
 
 	# Combine both lists:
 	# Not using this: name_pcnt_list = [[i,j] for i,j in zip(name_list,pcnt_list)]
@@ -151,10 +154,10 @@ def CampaignBetting():
 	#name_list.append('time')
 	#pcnt_list.append(current_time)
 
-	print(name_list)
-	print(pcnt_list)
-	print('len name_list:', len(name_list))
-	print('len pcnt_list:', len(pcnt_list))
+	print('scraped name_list:\n', name_list)
+	print('scraped pcnt_list:\n', pcnt_list)
+	print('len scraped name_list:', len(name_list))
+	print('len scraped pcnt_list:', len(pcnt_list))
 
 	# Finding 'Other' in the names list to split the list into Democratic, Republican and Presidential primaries
 	# [add 1 to every element x of [16, 47, 53 <- indices where 'Other' is located]]
@@ -167,48 +170,75 @@ def CampaignBetting():
 		grouped_name_list.append(name_list[i:j])
 		grouped_pcnt_list.append(pcnt_list[i:j])
 
-	# print('grouped_name_list:\n', grouped_name_list)
-	# print('grouped_pcnt_list:\n', grouped_pcnt_list)
-	# print('end indices:', end_indices)
-	# print('start_indices:', start_indices)
+	# Grouped by race:
+	# [[Dem primary race candidate names],	[Pres race candidate names],	[Rep primary race candidates]]
+	# [[Dem primary race betting odds],		[Pres race betting odds],		[Rep primary betting odds]]
+	# These grouped lists are used to make dictionaries of:
+	# {'Time':Datetime, '1st place name': odds, '2nd place name': odds, ... ,'Last place name': odds}
+	# Note: The resulting dem_dict, rep_dict, pres_dict are ordered from first place candidate to last,
+	# but this changes from day to day and needs to be sorted according to the previous day's candidate ranks
+	print('grouped_name_list:\n', grouped_name_list)
+	print('grouped_pcnt_list:\n', grouped_pcnt_list)
+	print('start_indices:', start_indices)	# e.g. [0,18,50]
+	print('end indices:', end_indices)		# e.g. [18, 50, 56]
 
-	dem_fields = ['Time'] + grouped_name_list[0] #['Time','Count','Goal', 'Pcnt']
-	rep_fields = ['Time'] + grouped_name_list[2]
-	pres_fields = ['Time'] + grouped_name_list[1]
+	dem_fields = grouped_name_list[0]
+	rep_fields = grouped_name_list[2]
+	pres_fields = grouped_name_list[1]
 	# print('dem_fields:\n', dem_fields)
 	# print('rep_fields:\n', rep_fields)
 	# print('pres_fields:\n', pres_fields)
 
-	dem_pcnts = [current_time] + grouped_pcnt_list[0]
-	rep_pcnts = [current_time] + grouped_pcnt_list[2]
-	pres_pcnts = [current_time] + grouped_pcnt_list[1]
+	dem_pcnts = grouped_pcnt_list[0]
+	rep_pcnts = grouped_pcnt_list[2]
+	pres_pcnts = grouped_pcnt_list[1]
 	# print('dem_pcnts:\n', dem_pcnts)
 	# print('rep_pcnts:\n', rep_pcnts)
 	# print('pres_pcnts:\n', pres_pcnts)
 
-	dem_field_pcnt_list = [[i,j] for i,j in zip(dem_fields,dem_pcnts)]
-	rep_field_pcnt_list = [[i,j] for i,j in zip(rep_fields,rep_pcnts)]
-	pres_field_pcnt_list = [[i,j] for i,j in zip(pres_fields,pres_pcnts)]
-	# print('dem_field_pcnt_list:\n', dem_field_pcnt_list)
+	time_tuple_list = [tuple(('Time',current_time))]
+
+	# Pair the field names (candidates) with betting pcnts into tuples:
+	dem_field_pcnt_list = [(i,j) for i,j in zip(dem_fields,dem_pcnts)]
+	rep_field_pcnt_list = [(i,j) for i,j in zip(rep_fields,rep_pcnts)]
+	pres_field_pcnt_list = [(i,j) for i,j in zip(pres_fields,pres_pcnts)]
+	
+	# Sort the lists by first element of each tuple (e.g. sort by candidate name)
+	dem_field_pcnt_list.sort(key=lambda x: x[0])
+	rep_field_pcnt_list.sort(key=lambda x: x[0])
+	pres_field_pcnt_list.sort(key=lambda x: x[0])
+
+	dem_field_pcnt_list = time_tuple_list + dem_field_pcnt_list
+	rep_field_pcnt_list = time_tuple_list + rep_field_pcnt_list
+	pres_field_pcnt_list = time_tuple_list + pres_field_pcnt_list
+	print('dem_field_pcnt_list:\n', dem_field_pcnt_list)
+	print('rep_field_pcnt_list:\n', rep_field_pcnt_list)
+	print('pres_field_pcnt_list:\n', pres_field_pcnt_list)
 
 	''' --- Making dictionaries for csv export --- '''
 	''' Dict comprehension syntax:		d = {key: value for (key, value) in iterable} '''
 	''' Dict comprehension from lists:	d = {key: value for (key, value) in zip(key_list, value_list)} '''
-	dem_dict = {key: value for (key, value) in zip(dem_fields, dem_pcnts)}
-	rep_dict = {key: value for (key, value) in zip(rep_fields, rep_pcnts)}
-	pres_dict = {key: value for (key, value) in zip(pres_fields, pres_pcnts)}
-	# print('dem_dict:\n', dem_dict)
-	# print('rep_dict:\n', rep_dict)
-	# print('pres_dict:\n', pres_dict)
 
-	# DON'T NEED BECAUSE TIME IS INCLUDED ABOVE
-	# time_dict = {'Time':current_time}
-	# dem_dict = dem_dict.update(time_dict)
-	# print('dem_dict:\n', dem_dict)
-	# rep_dict = rep_dict.update(time_dict)
-	# print('rep_dict:\n', rep_dict)
-	# pres_dict = pres_dict.update(time_dict)
-	# print('rep_dict:\n', rep_dict)
+	# Getting the first element of every tuple in X_field_pcnt_list to use for
+	# guiding the correct dictionary values to the correct columns when writing 
+	# the dictionaries to csv files using DictWriter:
+	dem_csv_fieldnames = [i[0] for i in dem_field_pcnt_list] # = ['Time', 'Biden', 'Booker', ... , 'Yang']
+	rep_csv_fieldnames = [i[0] for i in rep_field_pcnt_list]
+	pres_csv_fieldnames = [i[0] for i in pres_field_pcnt_list]
+
+	# Dictionaries are created from the same tuples that were
+	# just used above to create csv fieldnames:
+	dem_dict = dict(dem_field_pcnt_list) # {key: value for (key, value) in zip(dem_fields, dem_pcnts)}
+	rep_dict = dict(rep_field_pcnt_list) # {key: value for (key, value) in zip(rep_fields, rep_pcnts)}
+	pres_dict = dict(pres_field_pcnt_list) # {key: value for (key, value) in zip(pres_fields, pres_pcnts)}
+	print('dem_dict:\n', dem_dict)
+	print('rep_dict:\n', rep_dict)
+	print('pres_dict:\n', pres_dict)
+
+	''' Now that I have the new scraped data into one dictionary for each race, 
+		I write it to the csv files and pickle it, then pull the up-to-date csv data, 
+		put it into dataframes to plot.
+		Note: Each dictionary is one row of data. '''
 
 	''' Creates csv, overwrites the current one of the same name: '''
 	''' --- Only run once, then use append code block below --- '''
@@ -245,31 +275,28 @@ def CampaignBetting():
 	''' --------------------------------------------------------- '''
 	
 	''' --- Appends csv files --- '''
-	# Writing percents to csv:
+	# Writing dictionaries to csv:
 	with open(r'RaceDem.csv', 'a', newline='') as f:
-		writer = csv.DictWriter(f, fieldnames=dem_fields)
+		writer = csv.DictWriter(f, fieldnames=dem_csv_fieldnames)
 		writer.writerow(dem_dict)
 	with open(r'RaceRep.csv', 'a', newline='') as f:
-		writer = csv.DictWriter(f, fieldnames=rep_fields)
+		writer = csv.DictWriter(f, fieldnames=rep_csv_fieldnames)
 		writer.writerow(rep_dict)
 	with open(r'RacePres.csv', 'a', newline='') as f:
-		writer = csv.DictWriter(f, fieldnames=pres_fields)
+		writer = csv.DictWriter(f, fieldnames=pres_csv_fieldnames)
 		writer.writerow(pres_dict)
 
-	# Writing fields to csv to notify if political field changes
+	# Writing fields to a fields-specific csv to notify if political field changes
 	with open(r'RaceFieldsDem.csv','a', newline='') as f:
 		writer = csv.writer(f)
-		writer.writerow(dem_fields)
+		writer.writerow(dem_csv_fieldnames)
 	with open(r'RaceFieldsRep.csv','a', newline='') as f:
 		writer = csv.writer(f)
-		writer.writerow(rep_fields)
+		writer.writerow(rep_csv_fieldnames)
 	with open(r'RaceFieldsPres.csv','a', newline='') as f:
 		writer = csv.writer(f)
-		writer.writerow(pres_fields)
+		writer.writerow(pres_csv_fieldnames)
 	''' ------------------------- '''
-
-	# Close driver:
-	driver.quit()
 
 	# Read csv files into dataframe:
 	df_dem = pd.read_csv('RaceDem.csv')
@@ -278,10 +305,11 @@ def CampaignBetting():
 	df_dem_field = pd.read_csv('RaceFieldsDem.csv')
 	df_rep_field = pd.read_csv('RaceFieldsRep.csv')
 	df_pres_field = pd.read_csv('RaceFieldsPres.csv')
-	# Checking data:
-	print('df_dem bet percents:\n\n', df_dem.to_string())
+	# Checking data from csv read:
+	print('--- Checking data from csv read:\n')
+	print('df_dem bet percents from old csv:\n\n', df_dem.to_string())
 	print('\n\n')
-	print('df_dem_field:\n\n', df_dem_field.to_string())
+	print('df_dem_field from old csv:\n\n', df_dem_field.to_string())
 	print('\n\n')
 
 	# Generate warning if latest field doesn't match prior:
@@ -289,19 +317,11 @@ def CampaignBetting():
 	# print('list(df_dem_field.iloc[-1]):\n', list(df_dem_field.iloc[-1]))
 	# print('dem_fields:\n', dem_fields)
 
-	# Print if there's a disagreement between scraped and previous fields
-	# print('df_dem_field.iloc[-1]:\n', df_dem_field.iloc[-1])
-	# print('dem_fields:\n', dem_fields)
-	# print('df_rep_field.iloc[-1]:\n', df_rep_field.iloc[-1])
-	# print('rep_fields:\n', rep_fields)
-	# print('df_pres_field.iloc[-1]:\n', df_pres_field.iloc[-1])
-	# print('pres_fields:\n', pres_fields)
-
-	if any(df_dem_field.iloc[-1] != dem_fields):
+	if any(df_dem_field.iloc[-1] != dem_csv_fieldnames):
 		print('!!!!!!!!!!!!!!!!!!!!!!! Dem field has changed')
-	if any(df_rep_field.iloc[-1] != rep_fields):
+	if any(df_rep_field.iloc[-1] != rep_csv_fieldnames):
 		print('!!!!!!!!!!!!!!!!!!!!!!! Rep field has changed')
-	if any(df_pres_field.iloc[-1] != pres_fields):
+	if any(df_pres_field.iloc[-1] != pres_csv_fieldnames):
 		print('!!!!!!!!!!!!!!!!!!!!!!! Pres field has changed')
 
 	# Format csv derived Time column before plotting:
@@ -311,13 +331,14 @@ def CampaignBetting():
 	# Check time formatting:
 	# print('time type:\n', type(df_dem.iloc[0]['Time']))
 
-	# Append latest scraped data (dem_fields) to csv derived df's (df_dem):
-	df_dem = df_dem.append(dem_dict, ignore_index=True)
-	df_rep = df_rep.append(rep_dict, ignore_index=True)
-	df_pres = df_pres.append(pres_dict, ignore_index=True)
-	df_dem_field = df_dem_field.append(dem_fields, ignore_index=True)
-	df_rep_field = df_rep_field.append(rep_fields, ignore_index=True)
-	df_pres_field = df_pres_field.append(pres_dict, ignore_index=True)
+	# # Append latest scraped data (dem_csv_fieldnames) to csv derived df's (df_dem)
+	# # to plot and pickle out:
+	# df_dem = df_dem.append(dem_dict, ignore_index=True)
+	# df_rep = df_rep.append(rep_dict, ignore_index=True)
+	# df_pres = df_pres.append(pres_dict, ignore_index=True)
+	# df_dem_field = df_dem_field.append(dem_csv_fieldnames, ignore_index=True)
+	# df_rep_field = df_rep_field.append(dem_csv_fieldnames, ignore_index=True)
+	# df_pres_field = df_pres_field.append(dem_csv_fieldnames, ignore_index=True)
 
 	# Pickle out:
 	BettingOdds_df_dem_odds_pkl = df_dem.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_dem_odds.pkl')
@@ -327,48 +348,11 @@ def CampaignBetting():
 	BettingOdds_df_rep_field_pkl = df_rep_field.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_rep_field.pkl')
 	BettingOdds_df_pres_field_pkl = df_pres_field.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_pres_field.pkl')
 
-	# Close driver:
-	driver.quit()
+	return df_dem, df_rep, df_pres, dem_csv_fieldnames, rep_csv_fieldnames, pres_csv_fieldnames
 
-
-
-	return df_dem, df_rep, df_pres, df_dem_field, df_rep_field, df_pres_field
 
 
 def PlotCampaignBetting():
-
-	# # Individual matplotlib plots, replaced by pandas single plot below
-	# df_dem_no_time = df_dem.drop(columns=['Time','Yang','Biden'])
-	# cols = df_dem_no_time.columns
-	# ax = df_dem.plot(x='Time', y='Yang', color='b', linewidth=2, markersize=5, marker='o', markeredgecolor='b', markerfacecolor='white')
-	# df_dem.plot(x='Time', y='Biden', ax=ax, color='g', linewidth=2, markersize=5, marker='o', markeredgecolor='g', markerfacecolor='white')
-	# df_dem.plot(x='Time', y=cols, ax=ax)
-	# plt.xlabel('Datetime'); plt.ylabel('Betting odds, %'); plt.legend(loc='best')#center right', bbox_to_anchor=(0.7, 0.1, 0.5, 0.5))
-	# # Doesn't help the axis display: plt.xticks(rotation='vertical')
-	# plt.savefig('Betting Odds - Democratic Primary.png', bbox_inches='tight')
-	# plt.show()
-
-	# df_rep_no_time = df_rep.drop(columns=['Time','Trump','Pence'])
-	# cols = df_rep_no_time.columns
-	# ax = df_rep.plot(x='Time', y='Trump', color='r', linewidth=2, markersize=5, marker='o', markeredgecolor='r', markerfacecolor='white')
-	# df_rep.plot(x='Time', y='Pence', ax=ax, color='g', linewidth=2, markersize=5, marker='o', markeredgecolor='g', markerfacecolor='white')
-	# df_rep.plot(x='Time', y=cols, ax=ax)
-	# plt.xlabel('Datetime'); plt.ylabel('Betting odds, %'); plt.legend(loc='best')#center right', bbox_to_anchor=(0.7, 0.1, 0.5, 0.5))
-	# # Doesn't help the axis display: plt.xticks(rotation='vertical')
-	# plt.savefig('Betting Odds - Republican Primary.png', bbox_inches='tight')
-	# plt.show()
-
-	# df_pres_no_time = df_pres.drop(columns=['Time','Biden','Yang','Trump'])
-	# #df_pres_top8_no_time = df_pres_no_time.sort_values(axis=0)
-	# cols = df_pres_no_time.columns
-	# ax = df_dem.plot(x='Time', y='Yang', color='b', linewidth=2, markersize=5, marker='o', markeredgecolor='b', markerfacecolor='white')
-	# df_pres.plot(x='Time', y='Trump', ax=ax, color='r', linewidth=2, markersize=5, marker='o', markeredgecolor='r', markerfacecolor='white')
-	# df_pres.plot(x='Time', y='Biden', ax=ax, color='g', linewidth=2, markersize=5, marker='o', markeredgecolor='g', markerfacecolor='white')
-	# df_pres.plot(x='Time', y=cols, ax=ax)
-	# plt.xlabel('Datetime'); plt.ylabel('Betting odds, %'); plt.legend(loc='best')#center right', bbox_to_anchor=(0.7, 0.1, 0.5, 0.5))
-	# # Doesn't help the axis display: plt.xticks(rotation='vertical')
-	# plt.savefig('Betting Odds - Presidential Race.png', bbox_inches='tight')
-	# plt.show()
 
 	df_dem_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_dem_odds.pkl')
 	df_rep_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_rep_odds.pkl')
@@ -383,7 +367,7 @@ def PlotCampaignBetting():
 	# Filtering the top 3%, 8% and 5% of the dem, rep and pres odds to make legend manageable
 	# Mask the odds dataframes, resulting in all values below 3% to be turned to nans,
 	# grab values abot 3%, drop all columns that are entirely nans:
-	df_dem_odds_top = df_dem_odds[df_dem_odds.gt(3.5)].dropna(axis=1, how='all')
+	df_dem_odds_top = df_dem_odds[df_dem_odds.gt(4)].dropna(axis=1, how='all')
 	df_rep_odds_top = df_rep_odds[df_rep_odds.gt(8)].dropna(axis=1, how='all')
 	df_pres_odds_top = df_pres_odds[df_pres_odds.gt(5)].dropna(axis=1, how='all')
 
@@ -402,6 +386,99 @@ def PlotCampaignBetting():
 	plt.savefig('Betting Odds - All Races.png', bbox_inches='tight')
 	plt.show()
 
+	return
+
+
+
+def SortCampaignBettingCSV():
+	# How this works:
+	# Problem:	One csv file's data (all strings of presidential candidates) needs to be sorted 
+	#			alphabetically along each row, and another csv file's data (the numerical odds of
+	#			each candidate winning) need to follow the alphabetized data (e.g. Each
+	#			candidate's odds of winning need to follow the candidate as it is reordered relative
+	#			to other candidates in its row).
+	#
+	# Uses:		This function can be used on any two arrays of data where one comprises string
+	#			values that need to be reordered according to particular criteria and the sister
+	#			data in another array needs to follow suit.
+	#
+	# Notes:	One tempting option is to unravel both datasets into 1D arrays, merge them to pair them,
+	#			and then sort each pair. You would end up with [..., ['Avenatti',1.2],['Avenatti',1.2]...]
+	#			where each original row's neighbors are lost, and could be resolved by assembling
+	#			every nth row into a single list, and so on until the end of the 1D array.
+	#
+	# This function takes in odds and field csv files and organizes them by the following:
+	# 1) Create an array of arrays each containing a name-odds pair
+	# 2) Sort the subarray tuples according to the name in each, thus making them alphabetical,
+	#    e.g. [ [('Avenatti',odds), ('Biden',odds), ..., ('Zuckerberg',odds)], ..., [('Avenatti',odds), ('Biden',odds), ... , ('Zuckerberg',odds)] ]
+	# 3) Unzip the names from the odds values using unzipped_list = [zip(*sub_list) for sub_list in list], resulting in
+	#    e.g. [ [('Avenatti','Biden', ...,'Zuckerberg'),(odds, odds, ..., odds)], ..., [('Avenatti','Biden', ...,'Zuckerberg'),(odds,odds, ...,odds)] ]
+	# 4) Separate each sublist's two tuples into df_pres_field and df_pres_odds dataframes using two list comprehensions
+	# 5) Write the dataframes to csv's
+	df_pres_field = pd.read_csv('/home/dp/Documents/Campaign/RaceFieldsPres.csv')
+	df_pres_odds = pd.read_csv('/home/dp/Documents/Campaign/RacePres.csv')
+	print('df_pres_odds:\n', df_pres_odds)
+	
+	# Convert to numpy array:
+	pres_field_array = df_pres_field.values
+	pres_odds_array = df_pres_odds.values
+
+	# Delete the first Time column and datetime column
+	pres_field_array = np.delete(pres_field_array, 0, axis=1)
+	pres_odds_array = np.delete(pres_odds_array, 0, axis=1)
+
+	print('pres_field_array:\n', pres_field_array)
+	print('shape pres_field_array:\n', np.shape(pres_field_array))
+	print('pres_odds_array:\n', pres_odds_array)
+	print('shape pres_odds_array:\n', np.shape(pres_odds_array))
+
+	# Bring separate field and odds sublists together into pairs for sorting:
+	pres_field_odds_list = [list(zip(x,y)) for x,y in zip(pres_field_array,pres_odds_array)]
+	print('pres_field_odds_list:\n', pres_field_odds_list)
+
+	# Why does sub_list.sort(key=lambda tup: tup[0]) not work in the list comprehension? Possibly
+	# because it alters sub_list directly, rather than returning a separate result like sorted?
+	pres_field_odds_list_sorted = [sorted(sub_list, key=lambda tup: tup[0]) for sub_list in pres_field_odds_list]
+	print('pres_field_odds_list_sorted:\n', pres_field_odds_list_sorted)
+
+	# Unpack sorted list of tuples to separate numpy arrays or separate lists:
+	l = [list(zip(*sub_list)) for sub_list in pres_field_odds_list_sorted] # pres_field_list, pres_odds_list
+	print('l:\n', l)
+
+	# Final sorted lists:
+	pres_field_list = [list(x[0]) for x in l]
+	pres_odds_list = [list(x[1]) for x in l]
+	print('pres_field_list:\n', pres_field_list)
+	print('pres_odds_list:\n', pres_odds_list)
+
+	df_pres_field = pd.DataFrame(pres_field_list, columns=list(range(0,len(pres_field_list[-1]))))
+	df_pres_odds = pd.DataFrame(pres_odds_list, columns=pres_field_list[-1])
+	
+	print('df_pres_field:\n', df_pres_field.to_string())
+	print('df_pres_odds:\n', df_pres_odds.to_string())
+
+	df_pres_field.to_csv('/home/dp/Documents/Campaign/RaceFieldsPres_Sorted.csv')
+	df_pres_odds.to_csv('/home/dp/Documents/Campaign/RaceOddsPres_Sorted.csv')
+
+	# Write to csv:
+
+	''' --- Note about unzipping a list of tuples: First unzip works, second unzip rezips the data --- '''
+	# >>> source_list = ('1','a'),('2','b'),('3','c'),('4','d')
+	# >>> list1, list2 = zip(*source_list)
+	# >>> list1
+	# ('1', '2', '3', '4')
+	# >>> list2
+	# ('a', 'b', 'c', 'd')
+	# Edit: Note that zip(*iterable) is its own inverse:
+
+	# >>> list(source_list) == zip(*zip(*source_list))
+	# True
+	# When unpacking into two lists, this becomes:
+
+	# >>> list1, list2 = zip(*source_list)
+	# >>> list(source_list) == zip(list1, list2)
+	# True
+	''' ---------------------------------------------------------------------------------------------- '''
 	return
 
 
@@ -769,7 +846,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 
 ''' --- Run DonorCounter() --- '''
-# df = DonorCounter()
+df = DonorCounter()
 ''' -------------------------- '''
 
 
@@ -794,8 +871,10 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 ''' ------------------------------------------------------------------ '''
 
 ''' --- Run CampaignBetting() --- '''
-df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
-PlotCampaignBetting()
+# df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
+# PlotCampaignBetting()
+# --- Sorting Campaign ---
+# SortCampaignBettingCSV()
 ''' --------------------------- '''
 
 
