@@ -5,6 +5,7 @@ from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from bs4 import BeautifulSoup
 import requests
 import datetime
@@ -80,6 +81,53 @@ def DonorCounter():
 	# Pickle out:
 	DonorCountYang_df_pkl = df.to_pickle('/home/dp/Documents/Campaign/pickle/DonorCountYang_df.pkl')
 
+	# ''' Make projection for 200,000 donors '''
+	# Data from Time and Count column for 7 days prior to the current date
+	# Fit line to Count vs Time data.
+	# Plug 200,000 into y-value, solve for x (date)
+	# Put date value into plot: 'Projected 200,000 donors'
+
+	current_time = datetime.datetime.now()
+	print('current time:', current_time)
+	one_wk_timedelta = datetime.timedelta(days=7)
+	print('one_wk_timedelta:', one_wk_timedelta)
+	one_wk_prior_time = current_time - one_wk_timedelta
+	print('one_wk_prior_time:', one_wk_prior_time)
+	
+	
+	df['Time'] = pd.to_datetime(df['Time'])
+	df.set_index('Time', inplace=True)
+	df_one_wk = df.loc[one_wk_prior_time:current_time]
+	print('df_one_wk:\n', df_one_wk)
+
+	# mask = (df['Time'] >= one_wk_prior_time) & (df['Time'] <= current_time)
+	# df_one_wk = df.loc[mask]
+	# print('df_one_wk:\n', df_one_wk)
+	dates_float = mdates.date2num(df_one_wk.index)
+	print('dates_float:\n', dates_float)
+	count_one_wk = df_one_wk.loc[:,'Count']
+	print('df_one_wk.loc[:,"Count"]:\n', df_one_wk.loc[:,'Count'])
+
+	pfit = np.polyfit(x=dates_float, y=count_one_wk, deg=1)
+	linfit = np.poly1d(pfit)
+
+	#df.reset_index(inplace=True)
+	df_one_wk['Trendline'] = linfit(dates_float)
+	print('df_one_wk with Trendline:\n', df_one_wk)
+
+	# 200k donor prediction date:
+	start_date = current_time
+	date_step = datetime.timedelta(days=7)
+	projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,400))]
+	# print('projected_dates:', projected_dates)
+	projected_dates_float = mdates.date2num(projected_dates)
+	projected_donor_count = linfit(projected_dates_float)
+	# print('projected_donor_count:\n', projected_donor_count)
+	# print('shape projected_donor_count:\n', np.shape(projected_donor_count))
+	projected_datetime_200k = projected_dates[np.flatnonzero(projected_donor_count > 200000)[0]] # np.where also works but returns a 1-element tuple
+	projected_date_200k = projected_datetime_200k.strftime('%b %d, %Y')
+	print('projected_date_200k:', projected_date_200k)
+
 	# ''' Plotting data: '''
 	#fig = plt.figure()
 	w = 3
@@ -87,9 +135,12 @@ def DonorCounter():
 	#fig = plt.figure(frameon=False)
 	#fig.set_size_inches(w,h)
 	plt.figure()
-	plt.plot(df['Time'], df['Count'], linewidth=1, marker='o', markersize=3, markerfacecolor='none', markeredgecolor='k')
+	plt.plot(df.index, df['Count'], linewidth=1, color='k', marker='o', markersize=3, markerfacecolor='none', markeredgecolor='k')
+	plt.plot(df_one_wk.index, df_one_wk['Trendline'], color='r')
 	plt.xlabel('DateTime'); plt.ylabel('Number of donors')
-	plt.xticks(rotation='vertical')
+	plt.xticks(rotation=45)
+	plt.legend(labels=['Donor count','7-day trend'])
+	plt.title('200k donors projected date: {0}'.format(projected_date_200k))
 	plt.savefig('DonorCountYang.png', bbox_inches='tight')
 	plt.show()
 	# ''' --------------- '''
@@ -902,7 +953,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 
 ''' --- Run DonorCounter() --- '''
-#df = DonorCounter()
+df = DonorCounter()
 ''' -------------------------- '''
 
 
@@ -927,8 +978,8 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 ''' ------------------------------------------------------------------ '''
 
 ''' --- Run CampaignBetting() --- '''
-df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
-PlotCampaignBetting()
+#df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
+#PlotCampaignBetting()
 # --- Sorting Campaign ---
 # SortCampaignBettingCSV()
 ''' --------------------------- '''
