@@ -16,7 +16,6 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-
 from apscheduler.schedulers.background import BackgroundScheduler
 
 import re
@@ -64,7 +63,7 @@ def DonorCounter():
 	with open(r'DonorCountYang.csv', 'a', newline='') as f:
 	    writer = csv.DictWriter(f, fieldnames=fields)
 	    writer.writerow(donor_dict)
-	
+
 	# Close driver:
 	driver.quit()
 
@@ -75,7 +74,7 @@ def DonorCounter():
 	df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d %H:%M:%S')
 	# Check formatting:
 	#print('time type:\n', type(df.iloc[0]['Time']))
-	
+
 	print('Donor Count df:\n', df.to_string())
 
 	# Pickle out:
@@ -109,8 +108,16 @@ def DonorCounter():
 
 
 
-''' --- Betting Percentiles --- '''
+''' Betting Percentiles ---------------------------------------------------------------------------- '''
 def CampaignBetting():
+	# soup = bs.BeautifulSoup(html_source, 'lxml')
+	# print('soup')
+	# tables = soup.findAll('table', {'src': 'detail'})
+
+	# for table in tables:
+ #     if table.findParent("table") is None:
+ #         print str(table)
+
 	driver = webdriver.Chrome('/usr/bin/chromedriver')
 	# Runningn 'driver.minimize_window()' doesn't allow the donor count to update
 	driver.set_window_size(0, 0)
@@ -118,57 +125,56 @@ def CampaignBetting():
 	#driver = webdriver.Chrome('/home/dp/Downloads/')  # Optional argument, if not specified will search path.
 	url = 'https://electionbettingodds.com/'
 	driver.get(url)
-	time.sleep(1) # Allow the user see website load
-	
+	time.sleep(1) # Allow the user see website load	
+
+	#--- Getting each table:
+	tables = driver.find_elements_by_xpath('table')
+	tables = [table.get_attribute('innerHTML') for table in tables]
+	print('tables:\n', tables)
+
 	#--- Getting candidate names:
-	# Gets all names except for 'Other': href_links = driver.find_elements(By.TAG_NAME, "a")
-	# Gets all names except for 'Other': href_links = driver.find_elements(By.XPATH, '//td/a/img')
 	img_elements = driver.find_elements_by_tag_name('img')
 	img_elements_list = [str(img.get_attribute('src')) for img in img_elements]
 	# print('img_elements_list:\n', img_elements_list)
-	
-	# Filtering: unfiltered_name_list contains candidate names and instances of 'green' and 'red'
+
+	#--- Filtering: unfiltered_name_list contains candidate names and instances of 'green' and 'red'
 	unfiltered_name_list = [s.replace('https://electionbettingodds.com/','').replace('.png','') for s in img_elements_list if '/' in s]
 	name_list = [i for i in unfiltered_name_list if 'red' not in i and 'green' not in i]
 	# print('name_list:\n', name_list)
 
 	#--- Getting betting percentiles, putting them into pcnt_list:
-	bet_percentiles = driver.find_elements_by_xpath("//p[@style='font-size: 55pt; margin-bottom:-10px']")
-	pcnt_list = [float(pcnt.get_attribute('innerHTML').replace('%','')) for pcnt in bet_percentiles]
-	
+	betting_odds = driver.find_elements_by_xpath("//p[@style='font-size: 55pt; margin-bottom:-10px']")
+	odds_list = [float(pcnt.get_attribute('innerHTML').replace('%','')) for pcnt in betting_odds]
+
 	# Close driver:
 	driver.quit()
 
 	num_names = len(name_list)
-	num_pcnts = len(pcnt_list)
-	if num_names != num_pcnts:
+	num_odds = len(odds_list)
+	if num_names != num_odds:
 		print('!!!!!!!!!!!! Warning: number of candidates does not match number of percentiles\n\n\n\n\n\n\n\n')
 
 	# Combine both lists:
 	# Not using this: name_pcnt_list = [[i,j] for i,j in zip(name_list,pcnt_list)]
-	
-	# Get current time:
-	current_time = datetime.datetime.now()
-	# print('current_time:', current_time)
 
-	#name_list.append('time')
-	#pcnt_list.append(current_time)
+
 
 	print('scraped name_list:\n', name_list)
-	print('scraped pcnt_list:\n', pcnt_list)
+	print('scraped pcnt_list:\n', odds_list)
 	print('len scraped name_list:', len(name_list))
-	print('len scraped pcnt_list:', len(pcnt_list))
+	print('len scraped pcnt_list:', len(odds_list))
 
 	# Finding 'Other' in the names list to split the list into Democratic, Republican and Presidential primaries
+	# A better way would be to grab each list with independent calls
 	# [add 1 to every element x of [16, 47, 53 <- indices where 'Other' is located]]
 	# Results in [17, 48, 54]
 	end_indices = [x+1 for x in [i for i, n in enumerate(name_list) if n == 'Other']]
 	start_indices = [0] + end_indices[0:-1]
 
-	grouped_name_list = []; grouped_pcnt_list = []
+	grouped_name_list = []; grouped_odds_list = []
 	for i,j in zip(start_indices, end_indices):
 		grouped_name_list.append(name_list[i:j])
-		grouped_pcnt_list.append(pcnt_list[i:j])
+		grouped_odds_list.append(odds_list[i:j])
 
 	# Grouped by race:
 	# [[Dem primary race candidate names],	[Pres race candidate names],	[Rep primary race candidates]]
@@ -178,65 +184,108 @@ def CampaignBetting():
 	# Note: The resulting dem_dict, rep_dict, pres_dict are ordered from first place candidate to last,
 	# but this changes from day to day and needs to be sorted according to the previous day's candidate ranks
 	print('grouped_name_list:\n', grouped_name_list)
-	print('grouped_pcnt_list:\n', grouped_pcnt_list)
+	print('grouped_pcnt_list:\n', grouped_odds_list)
 	print('start_indices:', start_indices)	# e.g. [0,18,50]
 	print('end indices:', end_indices)		# e.g. [18, 50, 56]
 
-	dem_fields = grouped_name_list[0]
-	rep_fields = grouped_name_list[2]
-	pres_fields = grouped_name_list[1]
+	# Naming convention:
+	# new_ <- Just pulled from website
+	# old_ <- Data from csv from previous scrape
+
+	new_dem_fields = grouped_name_list[0]
+	new_rep_fields = grouped_name_list[2]
+	new_pres_fields = grouped_name_list[1]
 	# print('dem_fields:\n', dem_fields)
 	# print('rep_fields:\n', rep_fields)
 	# print('pres_fields:\n', pres_fields)
 
-	dem_pcnts = grouped_pcnt_list[0]
-	rep_pcnts = grouped_pcnt_list[2]
-	pres_pcnts = grouped_pcnt_list[1]
-	# print('dem_pcnts:\n', dem_pcnts)
-	# print('rep_pcnts:\n', rep_pcnts)
-	# print('pres_pcnts:\n', pres_pcnts)
+	new_dem_odds = grouped_odds_list[0]
+	new_rep_odds = grouped_odds_list[2]
+	new_pres_odds = grouped_odds_list[1]
+	# print('dem_odds:\n', dem_odds)
+	# print('rep_odds:\n', rep_odds)
+	# print('pres_odds:\n', pres_odds)
 
+	# Get current time:
+	current_time = datetime.datetime.now()
+	print('current_time:', current_time)
 	time_tuple_list = [tuple(('Time',current_time))]
 
-	# Pair the field names (candidates) with betting pcnts into tuples:
-	dem_field_pcnt_list = [(i,j) for i,j in zip(dem_fields,dem_pcnts)]
-	rep_field_pcnt_list = [(i,j) for i,j in zip(rep_fields,rep_pcnts)]
-	pres_field_pcnt_list = [(i,j) for i,j in zip(pres_fields,pres_pcnts)]
-	
+	# Pair the field names (candidates) with betting odds into tuples:
+	new_dem_field_odds = [(i,j) for i,j in zip(new_dem_fields, new_dem_odds)]
+	new_rep_field_odds = [(i,j) for i,j in zip(new_rep_fields, new_rep_odds)]
+	new_pres_field_odds = [(i,j) for i,j in zip(new_pres_fields, new_pres_odds)]
+
 	# Sort the lists by first element of each tuple (e.g. sort by candidate name)
-	dem_field_pcnt_list.sort(key=lambda x: x[0])
-	rep_field_pcnt_list.sort(key=lambda x: x[0])
-	pres_field_pcnt_list.sort(key=lambda x: x[0])
+	new_dem_field_odds.sort(key=lambda x: x[0])
+	new_rep_field_odds.sort(key=lambda x: x[0])
+	new_pres_field_odds.sort(key=lambda x: x[0])
 
-	dem_field_pcnt_list = time_tuple_list + dem_field_pcnt_list
-	rep_field_pcnt_list = time_tuple_list + rep_field_pcnt_list
-	pres_field_pcnt_list = time_tuple_list + pres_field_pcnt_list
-	print('dem_field_pcnt_list:\n', dem_field_pcnt_list)
-	print('rep_field_pcnt_list:\n', rep_field_pcnt_list)
-	print('pres_field_pcnt_list:\n', pres_field_pcnt_list)
+	# After alphabetical sort, add time tuple so it's the leftmost element
+	new_dem_field_odds = dict(time_tuple_list + new_dem_field_odds)
+	new_rep_field_odds = dict(time_tuple_list + new_rep_field_odds)
+	new_pres_field_odds = dict(time_tuple_list + new_pres_field_odds)
+	# print('new_dem_field_odds:\n', new_dem_field_odds)
+	# print('new_rep_field_odds:\n', new_rep_field_odds)
+	# print('new_pres_field_odds:\n', new_pres_field_odds)
 
-	''' --- Making dictionaries for csv export --- '''
-	''' Dict comprehension syntax:		d = {key: value for (key, value) in iterable} '''
+
+	# Read current CSV data and compare it to new scraped data
+	# to see if the field has changed since the last time data was recorded
+	old_dem_odds = pd.read_csv('RaceDem.csv').iloc[-1].values.tolist()
+	old_rep_odds = pd.read_csv('RaceRep.csv').iloc[-1].values.tolist()
+	old_pres_odds = pd.read_csv('RacePres.csv').iloc[-1].values.tolist()
+	old_dem_field = pd.read_csv('RaceFieldsDem.csv').iloc[-1].values.tolist()
+	old_rep_field = pd.read_csv('RaceFieldsRep.csv').iloc[-1].values.tolist()
+	old_pres_field = pd.read_csv('RaceFieldsPres.csv').iloc[-1].values.tolist()
+	# print('Verifying old_dem_odds from CSV file:\n', old_dem_odds)
+	# print('Verifying old_dem_field from CSV file:\n', old_dem_field)
+
+	# Make old field-odds list as a guide for filling new_dem_field_odds with np.NaN
+	# where candidates are missing from the scraped data
+	old_dem_field_odds = {n:o for (n,o) in zip(old_dem_field, old_dem_odds)}
+	old_rep_field_odds = {n:o for (n,o) in zip(old_rep_field, old_rep_odds)}
+	old_pres_field_odds = {n:o for (n,o) in zip(old_pres_field, old_pres_odds)}
+	print('--------------------------------------------- old_dem_field_odds:\n', old_dem_field_odds)
+	print('--------------------------------------------- old_rep_field_odds:\n', old_rep_field_odds)
+	print('--------------------------------------------- old_pres_field_odds:\n', old_pres_field_odds)
+
+
+	# If a name in old_dem_field_odds matches any name in new_dem_field_odds, then return the name and new odds value, else return 0
+	# old_pres_field_odds 			= {'Time': '2019-04-05 19:40:28.784303', 'Avenatti': 0.1, 'Biden': 6.9, 'Bloomberg': 0.4, 'Booker': 0.9, 'Brown': 0.1, 'Buttigieg': 5.7, ...}
+	# new_pres_field_odds 			= {'Time': datetime(2019,4,6,14,57,13), 'Biden': 7.0, 'Bloomberg': 0.4, 'Booker': 0.9, 'Buttigieg': 5.6, ...}
+	# new_pres_field_odds_matched 	= {'Time': datetime(2019,4,6,14,57,13), 'Avenatti': 0, 'Biden': 7.0, 'Bloomberg': 0.4, 'Booker': 0.9, 'Brown': 0, 'Buttigieg': 5.6, ...}
+	# Note how the new_pres_field_odds_matched list has Avenatti at 0 and Biden's updated value of 7.0. Between old and new, Avenatti was dropped
+	# from the presidential race list and Biden's odds value changed.
+	# For some reason the new_ dictionaries have datetime objects but the resulting CSV write is the same.
+	new_dem_field_odds_matched = {k:new_dem_field_odds[k] if k in new_dem_field_odds else 0 for (k,v) in old_dem_field_odds.items()}
+	new_rep_field_odds_matched = {k:new_rep_field_odds[k] if k in new_rep_field_odds else 0 for (k,v) in old_rep_field_odds.items()}
+	new_pres_field_odds_matched = {k:new_pres_field_odds[k] if k in new_pres_field_odds else 0 for (k,v) in old_pres_field_odds.items()}
+	print('********************************************* new_dem_field_odds_matched:\n', new_dem_field_odds_matched)
+	print('********************************************* new_rep_field_odds_matched:\n', new_rep_field_odds_matched)
+	print('********************************************* new_pres_field_odds_matched:\n', new_pres_field_odds_matched)
+
+
+	# Now that the latest scraped field and odds data is matched to the old csv data
+	# with all missing values filled in with np.NaN, write this data to dictionaries
+	''' Dict comprehension syntax:		d = {key: value for (key, value) in dict.items()} Note: .items() makes the dictionary iterable'''
 	''' Dict comprehension from lists:	d = {key: value for (key, value) in zip(key_list, value_list)} '''
+	# Dictionaries are written to CSV files
+	new_dem_dict = new_dem_field_odds_matched
+	new_rep_dict = new_rep_field_odds_matched
+	new_pres_dict = new_pres_field_odds_matched
+	print('new_dem_dict:\n', new_dem_dict)
+	print('new_rep_dict:\n', new_rep_dict)
+	print('new_pres_dict:\n', new_pres_dict)
+	# Written to CSV fieldnames
+	new_dem_field = list(new_dem_dict.keys())
+	new_rep_field = list(new_rep_dict.keys())
+	new_pres_field = list(new_pres_dict.keys())
+	print('new_dem_field from dictionary:\n', new_dem_field)
 
-	# Getting the first element of every tuple in X_field_pcnt_list to use for
-	# guiding the correct dictionary values to the correct columns when writing 
-	# the dictionaries to csv files using DictWriter:
-	dem_csv_fieldnames = [i[0] for i in dem_field_pcnt_list] # = ['Time', 'Biden', 'Booker', ... , 'Yang']
-	rep_csv_fieldnames = [i[0] for i in rep_field_pcnt_list]
-	pres_csv_fieldnames = [i[0] for i in pres_field_pcnt_list]
 
-	# Dictionaries are created from the same tuples that were
-	# just used above to create csv fieldnames:
-	dem_dict = dict(dem_field_pcnt_list) # {key: value for (key, value) in zip(dem_fields, dem_pcnts)}
-	rep_dict = dict(rep_field_pcnt_list) # {key: value for (key, value) in zip(rep_fields, rep_pcnts)}
-	pres_dict = dict(pres_field_pcnt_list) # {key: value for (key, value) in zip(pres_fields, pres_pcnts)}
-	print('dem_dict:\n', dem_dict)
-	print('rep_dict:\n', rep_dict)
-	print('pres_dict:\n', pres_dict)
-
-	''' Now that I have the new scraped data into one dictionary for each race, 
-		I write it to the csv files and pickle it, then pull the up-to-date csv data, 
+	''' Now that I have the new scraped data into one dictionary for each race,
+		I write it to the csv files and pickle it, then pull the up-to-date csv data,
 		put it into dataframes to plot.
 		Note: Each dictionary is one row of data. '''
 
@@ -273,32 +322,35 @@ def CampaignBetting():
 	# 	writer.writerow(cols)
 	# 	writer.writerow(pres_fields)
 	''' --------------------------------------------------------- '''
-	
+
 	''' --- Appends csv files --- '''
-	# Writing dictionaries to csv:
+	# Writing dictionaries with scraped data to csv:
 	with open(r'RaceDem.csv', 'a', newline='') as f:
-		writer = csv.DictWriter(f, fieldnames=dem_csv_fieldnames)
-		writer.writerow(dem_dict)
+		writer = csv.DictWriter(f, fieldnames=new_dem_field)
+		writer.writerow(new_dem_dict)
 	with open(r'RaceRep.csv', 'a', newline='') as f:
-		writer = csv.DictWriter(f, fieldnames=rep_csv_fieldnames)
-		writer.writerow(rep_dict)
+		writer = csv.DictWriter(f, fieldnames=new_rep_field)
+		writer.writerow(new_rep_dict)
 	with open(r'RacePres.csv', 'a', newline='') as f:
-		writer = csv.DictWriter(f, fieldnames=pres_csv_fieldnames)
-		writer.writerow(pres_dict)
+		writer = csv.DictWriter(f, fieldnames=new_pres_field)
+		writer.writerow(new_pres_dict)
 
 	# Writing fields to a fields-specific csv to notify if political field changes
 	with open(r'RaceFieldsDem.csv','a', newline='') as f:
 		writer = csv.writer(f)
-		writer.writerow(dem_csv_fieldnames)
+		writer.writerow(new_dem_field)
 	with open(r'RaceFieldsRep.csv','a', newline='') as f:
 		writer = csv.writer(f)
-		writer.writerow(rep_csv_fieldnames)
+		writer.writerow(new_rep_field)
 	with open(r'RaceFieldsPres.csv','a', newline='') as f:
 		writer = csv.writer(f)
-		writer.writerow(pres_csv_fieldnames)
+		writer.writerow(new_pres_field)
 	''' ------------------------- '''
 
-	# Read csv files into dataframe:
+	# Read csv files into dataframe. Doing this here to plot the entire
+	# time series of the data. Alternatively, could read in old data from csv,
+	# append new data to the dataframe, write back to csv, then plot dataframe.
+
 	df_dem = pd.read_csv('RaceDem.csv')
 	df_rep = pd.read_csv('RaceRep.csv')
 	df_pres = pd.read_csv('RacePres.csv')
@@ -317,12 +369,18 @@ def CampaignBetting():
 	# print('list(df_dem_field.iloc[-1]):\n', list(df_dem_field.iloc[-1]))
 	# print('dem_fields:\n', dem_fields)
 
-	if any(df_dem_field.iloc[-1] != dem_csv_fieldnames):
+	if any(df_dem_field.iloc[-1] != new_dem_field):
 		print('!!!!!!!!!!!!!!!!!!!!!!! Dem field has changed')
-	if any(df_rep_field.iloc[-1] != rep_csv_fieldnames):
+		print('df_dem_field.iloc[-1]:\n', df_dem_field.iloc[-1])
+		print('new_dem_field:\n', new_dem_field)
+	if any(df_rep_field.iloc[-1] != new_rep_field):
 		print('!!!!!!!!!!!!!!!!!!!!!!! Rep field has changed')
-	if any(df_pres_field.iloc[-1] != pres_csv_fieldnames):
-		print('!!!!!!!!!!!!!!!!!!!!!!! Pres field has changed')
+		print('df_rep_field.iloc[-1]:\n', df_rep_field.iloc[-1])
+		print('new_rep_field:\n', new_rep_field)
+	if any(df_pres_field.iloc[-1] != new_pres_field):
+		print('!!!!!!!!!!!!!!!!!!!!!!! Pres field has changed:\n')
+		print('df_pres_field.iloc[-1]:\n', df_pres_field.iloc[-1])
+		print('new_pres_field:\n', new_pres_field)
 
 	# Format csv derived Time column before plotting:
 	df_dem['Time'] = pd.to_datetime(df_dem['Time'], format='%Y-%m-%d %H:%M:%S')
@@ -348,7 +406,7 @@ def CampaignBetting():
 	BettingOdds_df_rep_field_pkl = df_rep_field.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_rep_field.pkl')
 	BettingOdds_df_pres_field_pkl = df_pres_field.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_pres_field.pkl')
 
-	return df_dem, df_rep, df_pres, dem_csv_fieldnames, rep_csv_fieldnames, pres_csv_fieldnames
+	return df_dem, df_rep, df_pres, df_dem_field, df_rep_field, df_pres_field
 
 
 
@@ -359,12 +417,12 @@ def PlotCampaignBetting():
 	df_pres_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_pres_odds.pkl')
 
 	print('df_dem_odds pickle in:\n', df_dem_odds.to_string())
-	
+
 	df_dem_odds.set_index('Time', inplace=True)
 	df_rep_odds.set_index('Time', inplace=True)
 	df_pres_odds.set_index('Time', inplace=True)
 
-	# Filtering the top 3%, 8% and 5% of the dem, rep and pres odds to make legend manageable
+	# Filtering the top 4%, 8% and 5% of the dem, rep and pres odds to make legend manageable
 	# Mask the odds dataframes, resulting in all values below 3% to be turned to nans,
 	# grab values abot 3%, drop all columns that are entirely nans:
 	df_dem_odds_top = df_dem_odds[df_dem_odds.gt(4)].dropna(axis=1, how='all')
@@ -392,7 +450,7 @@ def PlotCampaignBetting():
 
 def SortCampaignBettingCSV():
 	# How this works:
-	# Problem:	One csv file's data (all strings of presidential candidates) needs to be sorted 
+	# Problem:	One csv file's data (all strings of presidential candidates) needs to be sorted
 	#			alphabetically along each row, and another csv file's data (the numerical odds of
 	#			each candidate winning) need to follow the alphabetized data (e.g. Each
 	#			candidate's odds of winning need to follow the candidate as it is reordered relative
@@ -418,7 +476,7 @@ def SortCampaignBettingCSV():
 	df_pres_field = pd.read_csv('/home/dp/Documents/Campaign/RaceFieldsPres.csv')
 	df_pres_odds = pd.read_csv('/home/dp/Documents/Campaign/RacePres.csv')
 	print('df_pres_odds:\n', df_pres_odds)
-	
+
 	# Convert to numpy array:
 	pres_field_array = df_pres_field.values
 	pres_odds_array = df_pres_odds.values
@@ -453,7 +511,7 @@ def SortCampaignBettingCSV():
 
 	df_pres_field = pd.DataFrame(pres_field_list, columns=list(range(0,len(pres_field_list[-1]))))
 	df_pres_odds = pd.DataFrame(pres_odds_list, columns=pres_field_list[-1])
-	
+
 	print('df_pres_field:\n', df_pres_field.to_string())
 	print('df_pres_odds:\n', df_pres_odds.to_string())
 
@@ -489,12 +547,12 @@ def WebMetrics():
 	# Yang: https://www.instagram.com/andrewyang2020/
 	# Gabbard: https://www.instagram.com/tulsigabbard/
 	# Harris: https://www.instagram.com/kamalaharris/ # Events: https://www.mobilize.us/kamalaharris/
-	# Sanders: https://www.instagram.com/berniesanders/ # Events: 
+	# Sanders: https://www.instagram.com/berniesanders/ # Events:
 	# Warren: https://www.instagram.com/elizabethwarren/
 	# O'Rourke: https://www.instagram.com/betoorourke/
 	# Booker: https://www.instagram.com/corybooker/
 	# Trump: https://www.instagram.com/realdonaldtrump/
-	# 
+	#
 	# https://twitter.com/joebiden
 	# https://twitter.com/AndrewYang
 	# https://twitter.com/TulsiGabbard
@@ -506,7 +564,7 @@ def WebMetrics():
 	# https://twitter.com/PeteButtigieg
 	# https://twitter.com/amyklobuchar
 	# https://twitter.com/realDonaldTrump
-	# 
+	#
 	# Followers element:
 	# <a class="-nal3 " href="/elizabethwarren/followers/"><span class="g47SY " title="1,342,293">1.3m</span> followers</a>
 	# followers_elements = driver.find_elements_by_tag_name('a')
@@ -520,13 +578,11 @@ def WebMetrics():
 	#
 	# Followers element:
 	# <span class="ProfileNav-value" data-count="193814" data-is-compact="true">194K</span>
-	# 
+	#
 	# Tweet time element:
 	# <a href="/AndrewYang/status/1109526585420464129" class="tweet-timestamp js-permalink js-nav js-tooltip" title="11:45 AM - 23 Mar 2019" data-conversation-id="1109526585420464129"><span class="_timestamp js-short-timestamp js-relative-timestamp" data-time="1553366726" data-time-ms="1553366726000" data-long-form="true" aria-hidden="true">2h</span><span class="u-hiddenVisually" data-aria-label-part="last">2 hours ago</span></a>
-	# 
+	#
 	# Tweet contents:
-	# <p class="TweetTextSize TweetTextSize--normal js-tweet-text tweet-text" lang="en" data-aria-label-part="0">Thanks for the shoutout <a href="/cthagod" class="twitter-atreply pretty-link js-nav" dir="ltr" data-mentioned-user-id="17878322"><s>@</s><b>cthagod</b></a> <img class="Emoji Emoji--forText" src="https://abs.twimg.com/emoji/v2/72x72/1f44d.png" draggable="false" alt="👍" title="Thumbs up sign" aria-label="Emoji: Thumbs up sign"><a href="https://t.co/utSmWtDxLD" rel="nofollow noopener" dir="ltr" data-expanded-url="https://www.cbsnews.com/live-news/charlamagne-tha-god-interview-cbs-news-president-2020/?ftag=CNM-00-10aab6a&amp;linkId=65096384" class="twitter-timeline-link u-hidden" target="_blank" title="https://www.cbsnews.com/live-news/charlamagne-tha-god-interview-cbs-news-president-2020/?ftag=CNM-00-10aab6a&amp;linkId=65096384"><span class="tco-ellipsis"></span><span class="invisible">https://www.</span><span class="js-display-url">cbsnews.com/live-news/char</span><span class="invisible">lamagne-tha-god-interview-cbs-news-president-2020/?ftag=CNM-00-10aab6a&amp;linkId=65096384</span><span class="tco-ellipsis"><span class="invisible">&nbsp;</span>…</span></a></p>
-	# <p class="TweetTextSize TweetTextSize--normal js-tweet-text tweet-text" lang="en" data-aria-label-part="0">Fear does not exist in this dojo.<a href="https://t.co/gz8JiqaRCY" class="twitter-timeline-link u-hidden" data-pre-embedded="true" dir="ltr">pic.twitter.com/gz8JiqaRCY</a></p>
 
 	# Scraping socialblade.com:
 	driver = webdriver.Chrome('/usr/bin/chromedriver')
@@ -666,7 +722,7 @@ def WebMetrics():
 	# Adding the 'Name' column to the index (append does this):
 	# Don't need name in the index
 	#df_all_candidates.set_index(['Name'], append=True, inplace=True)
-	
+
 	# Export to csv
 	csv_all_filename = csv_filename_base + 'AllCandidates.csv'
 	df_all_candidates.to_csv(path_or_buf=csv_all_filename)
@@ -674,7 +730,7 @@ def WebMetrics():
 
 	# Pickle out:
 	TwitterMetrics_df_all_candidates_pkl = df_all_candidates.to_pickle('/home/dp/Documents/Campaign/pickle/TwitterMetrics_df_all_candidates.pkl')
-	
+
 	driver.quit()
 
 	return dygraph_elements_list
@@ -687,7 +743,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 	# df.sort_index(inplace=True)
 	df.reset_index(inplace=True)
 	#rint('df:\n', df.to_string())
-	
+
 	plt.close()
 
 	# Dropping Donald Trump from df:
@@ -716,7 +772,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 	# subtract timedelta from current date
 	# get all data from df['Total Follower Count'].loc[start_date:end_date] grouped by name
 	# plot bar plot
-	
+
 	# Creating list of previous dates to calculate percent growth time period:
 	dates_start_list = [datetime.datetime.strptime(date_str, '%Y,%m,%d') for date_str in datepoints_start_list]
 	date_start_objects_list = [pd.Timestamp(d) for d in dates_start_list]
@@ -753,7 +809,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 		''' As an exercise, the above will be repeated, but instead of creating an
 			index object, it should be possible to use the critera for selecting
-			the data and selecting the data itself in one step (no need to create 
+			the data and selecting the data itself in one step (no need to create
 			an index object and then delete indices):
 			1) Select dataframe based on logical critera (using chain indexing, can I avoid this?) '''
 		df_start = df[(df['Date']==start)][['Name',col_of_interest]]
@@ -773,7 +829,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 		else:
 			df_all_pcnt_growth = pd.concat((df_all_pcnt_growth,df_pcnt_growth), axis=1, sort=True)
 
-	# [NEEDS TO BE FIXED] THESE NAMES NEED TO BE DERIVED FROM WebMetrics() 
+	# [NEEDS TO BE FIXED] THESE NAMES NEED TO BE DERIVED FROM WebMetrics()
 	# ABOVE. DOING MANUAL CORRECTION HERE:
 	last_name_list = []
 	for name in df_all_pcnt_growth.index:
@@ -808,7 +864,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 	df_all_pcnt_growth.columns = start_end_str_list
 	print('df_all_pcnt_growth:\n', df_all_pcnt_growth.to_string())
-	
+
 	plt.close()
 	label = df_pcnt_growth.index
 	title = col_of_interest
@@ -820,7 +876,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 	plt.show()
 
 	return ax
-		
+
 		# # Filtering: unfiltered_name_list contains candidate names and instances of 'green' and 'red'
 		# unfiltered_name_list = [s.replace('https://electionbettingodds.com/','').replace('.png','') for s in img_elements_list if '/' in s]
 		# name_list = [i for i in unfiltered_name_list if 'red' not in i and 'green' not in i]
@@ -846,7 +902,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 
 ''' --- Run DonorCounter() --- '''
-df = DonorCounter()
+#df = DonorCounter()
 ''' -------------------------- '''
 
 
@@ -865,14 +921,14 @@ df = DonorCounter()
 
 ''' --- Initialize dem, rep, and pres dictionaries and dataframes. --- '''
 ''' Only do once. Not sure if this code is doing anything '''
-# dem_dict = {}; rep_dict = {}; pres_dict = {}; 
+# dem_dict = {}; rep_dict = {}; pres_dict = {};
 # df_dem = pd.DataFrame([]); df_rep = pd.DataFrame([]); df_pres = pd.DataFrame([])
 # df_dem_field = pd.DataFrame([]); df_rep_field = pd.DataFrame([]); df_pres_field = pd.DataFrame([])
 ''' ------------------------------------------------------------------ '''
 
 ''' --- Run CampaignBetting() --- '''
-# df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
-# PlotCampaignBetting()
+df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
+PlotCampaignBetting()
 # --- Sorting Campaign ---
 # SortCampaignBettingCSV()
 ''' --------------------------- '''
