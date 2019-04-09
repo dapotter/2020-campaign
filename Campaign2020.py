@@ -155,11 +155,53 @@ def DonorCounter():
 	# except TimeoutException:
 	# 	print("Timed out waiting for page to load")
 
-	return df
+	return
 
 
+''' ----------------------------------------------------------------------------------------------- '''
 
-''' Betting Percentiles ---------------------------------------------------------------------------- '''
+
+def NationalPolling():
+	df = pd.read_csv('/home/dp/Documents/Campaign/NationalPolling.csv', sep=',')
+	print('df:\n', df.to_string())
+	unparsed_dates = df['Date'].values.tolist()
+	parsed_dates = [s[0:s.rindex('- ')].replace('- ','').replace(' ','') for s in unparsed_dates]
+	print('df:\n', df.to_string())
+
+	years = df['Year']
+	complete_dates = [d+'/'+str(y) for d,y in zip(parsed_dates, years)]
+	formatted_dates = [datetime.datetime.strptime(d, '%m/%d/%Y') for d in complete_dates]
+	#print('formatted_dates:', formatted_dates)
+	df['Date'] = formatted_dates
+	print('df.iloc[10,"Date"]:\n', type(df['Date'].iloc[10]))
+	df.drop('Year', axis=1, inplace=True)
+	#print('-- character:\n', df.loc[df['Date']=='2019-03-25','Yang'])
+	df.replace('--', np.nan, inplace=True)
+
+	df.set_index('Date', inplace=True)
+	print('df:\n', df.to_string())
+
+	# Removing the apostrophe from O'Rourke
+	df.columns = [s.replace("'","") for s in df.columns]
+	# Dropping 'Poll' column
+	candidates = df.columns[1:]
+	df = df[candidates].apply(pd.to_numeric, errors='coerce')
+	
+	# Data associated with duplicate dates are averaged
+	df = df.groupby(df.index).mean()
+
+	print('df:\n', df.to_string())
+
+	NationalPolling_df_pkl = df.to_pickle('/home/dp/Documents/Campaign/pickle/NationalPolling_df.pkl')
+
+	print('Democratic Primary Candidates:\n', candidates)
+	df.plot(y=candidates, title='National Polling - Democratic Primary')
+	plt.show()
+
+	return
+''' --------------------------------------------------------------------------------------------- '''
+
+
 def CampaignBetting():
 	# soup = bs.BeautifulSoup(html_source, 'lxml')
 	# print('soup')
@@ -292,7 +334,7 @@ def CampaignBetting():
 	# print('Verifying old_dem_odds from CSV file:\n', old_dem_odds)
 	# print('Verifying old_dem_field from CSV file:\n', old_dem_field)
 
-	# Make old field-odds list as a guide for filling new_dem_field_odds with np.NaN
+	# Make old field-odds list as a guide for filling new_dem_field_odds with np.nan
 	# where candidates are missing from the scraped data
 	old_dem_field_odds = {n:o for (n,o) in zip(old_dem_field, old_dem_odds)}
 	old_rep_field_odds = {n:o for (n,o) in zip(old_rep_field, old_rep_odds)}
@@ -318,7 +360,7 @@ def CampaignBetting():
 
 
 	# Now that the latest scraped field and odds data is matched to the old csv data
-	# with all missing values filled in with np.NaN, write this data to dictionaries
+	# with all missing values filled in with np.nan, write this data to dictionaries
 	''' Dict comprehension syntax:		d = {key: value for (key, value) in dict.items()} Note: .items() makes the dictionary iterable'''
 	''' Dict comprehension from lists:	d = {key: value for (key, value) in zip(key_list, value_list)} '''
 	# Dictionaries are written to CSV files
@@ -953,7 +995,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 
 ''' --- Run DonorCounter() --- '''
-df = DonorCounter()
+DonorCounter()
 ''' -------------------------- '''
 
 
@@ -967,6 +1009,10 @@ df = DonorCounter()
 # sched.shutdown()
 
 
+''' --- Run NationalPolling() --- '''
+NationalPolling()
+''' --------------------- '''
+
 
 ''' ----------------------------------------- CampaignBetting() ----------------------------------------- '''
 
@@ -977,9 +1023,10 @@ df = DonorCounter()
 # df_dem_field = pd.DataFrame([]); df_rep_field = pd.DataFrame([]); df_pres_field = pd.DataFrame([])
 ''' ------------------------------------------------------------------ '''
 
+
 ''' --- Run CampaignBetting() --- '''
-#df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
-#PlotCampaignBetting()
+df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
+PlotCampaignBetting()
 # --- Sorting Campaign ---
 # SortCampaignBettingCSV()
 ''' --------------------------- '''
@@ -994,3 +1041,5 @@ df = DonorCounter()
 						# TO LOAD CSV DATA, ADD THE MOST RECENT SCRAPED DATA TO IT AND WRITE BACK TO CSV.
 #PlotWebMetrics(['2019,3,1','2019,3,8','2019,3,15','2019,3,22'],['2019,3,8','2019,3,15','2019,3,22','2019,3,25'])
 ''' ----------------------------- '''
+
+
