@@ -21,7 +21,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 import re
 
+import glob
+import os
+
 sched = BackgroundScheduler()
+
 
 # Create original dataframe once:
 def DonorCounter():
@@ -154,6 +158,88 @@ def DonorCounter():
 	# 	print('donor_count_3:\n', donor_count_3.text)
 	# except TimeoutException:
 	# 	print("Timed out waiting for page to load")
+
+	return
+
+
+''' ----------------------------------------------------------------------------------------------- '''
+
+
+def FEC():
+	# Plots Federal Election Commission's public records of donations to each political candidate
+	# Columns: contribution_receipt_date and contribution_receipt_amount
+	FEC_files_path = '/home/dp/Documents/Campaign/FEC/'
+	FEC_files = glob.glob(os.path.join(FEC_files_path, '*.csv')) # H500 file paths in a list
+
+	fields = ['committee_name','contributor_name','contribution_receipt_date','contribution_receipt_amount']
+	df_gen = (pd.read_csv(f, header='infer', usecols=fields) for f in FEC_files)
+	df = pd.concat(df_gen, axis=0, sort=True)
+
+	# REPLACING COMMITTEE NAMES. NEED TO USE BETTER METHOD.
+	# df.replace('DONALD J. TRUMP FOR PRESIDENT, INC.','Trump', inplace=True)
+	# df.replace('TRUMP MAKE AMERICA GREAT AGAIN COMMITTEE','Trump (MAGA)', inplace=True)
+	# df.replace('TRUMP VICTORY','Trump (Victory)', inplace=True)
+	df.replace('ELIZABETH WARREN ACTION FUND','Warren', inplace=True)
+	df.replace('FRIENDS OF BERNIE SANDERS','Sanders', inplace=True)
+	df.replace('FRIENDS OF ANDREW YANG','Yang', inplace=True)
+
+
+	print('df:\n', df)
+	df['contribution_receipt_date'] = pd.to_datetime(df['contribution_receipt_date'])
+	print('type(df["contribution_receipt_date"]:', type(df["contribution_receipt_date"].iloc[0]))
+	df.set_index(['committee_name', 'contribution_receipt_date'], inplace=True)
+	df.sort_index(inplace=True)
+	print('df:\n', df)
+	# May need to specify committee names in the future: committee_names_list = df.index.get_level_values(0).unique().to_list()
+	committee_names_list = ['Sanders', 'Warren', 'Yang'] # 'Trump', 'Trump\n(MAGA)', 'Trump\n(Victory)'
+	print('committee_names_list:\n', committee_names_list)
+
+	df.reset_index(inplace=True)
+
+	# Plotting: Time Series of cumulative sum of donation amounts
+	df_timeseries_donation_amount = df.set_index('contribution_receipt_date')[['committee_name', 'contribution_receipt_amount']]
+	df_timeseries_donation_amount['cumsum'] = df_timeseries_donation_amount.groupby('committee_name')['contribution_receipt_amount'].apply(lambda x: x.cumsum())
+	df_timeseries_donation_amount.groupby('committee_name')['cumsum'].plot(y='cumsum', legend=True)
+	print('df_timeseries_donation_amount:\n', df_timeseries_donation_amount)
+	plt.ylabel('Cumulative Donation Amount, $')
+	plt.xlabel('Date')
+	plt.savefig('FEC_DonationTimeSeries', bbox_inches='tight')
+	plt.show()
+
+	df_stats = df.set_index('committee_name')['contribution_receipt_amount']
+	df_stats = df_stats.groupby(['committee_name']).agg(['sum','count','mean','std'])
+	df_stats['sum'] = df_stats['sum'] / 100000
+	print('df_stats:\n', df_stats)
+
+
+	# Plotting: Total donation amount, unique donors, average donation amount:
+	plt.close()
+	fig, ax = plt.subplots(nrows=4, ncols=1, figsize=(3,10))
+	# df_total_donation_amount.plot.bar(use_index=True, ax=ax[0], rot=0, color='gray')
+	# df_total_unique_donations.plot.bar(use_index=True, ax=ax[1], rot=0, color='k')
+	# df_amount_unique_ratio.plot.bar(use_index=True, ax=ax[2], rot=0, color='r')
+	df_stats.plot.bar(y='sum', use_index=True, ax=ax[0], rot=0, legend=False, color='gray')
+	df_stats.plot.bar(y='count', use_index=True, ax=ax[1], rot=0, legend=False, color='k')
+	df_stats.plot.bar(y='mean', yerr='std', use_index=True, ax=ax[2], rot=0, legend=False, color='r')
+	df.boxplot(column='contribution_receipt_amount', by='committee_name', ax=ax[3], rot=0)
+	
+	# Setting axis parameters:
+	ax[0].set_ylabel('Donation Total, $1000')
+	ax[1].set_ylabel('Unique Donations')
+	ax[2].set_ylabel('Avg Donation, $')
+	ax[3].set_ylabel('Donation Amount, $'); ax[3].set_xlabel('PAC'); ax[3].set_title('')
+	
+	# Turn off x-axis labels and x-axis tick labels:
+	x_axis = ax[0].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
+	x_axis = ax[1].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
+	x_axis = ax[2].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
+
+	plt.suptitle('')
+	plt.subplots_adjust(left=0.2, right=0.9, bottom=0.1, top=0.9, wspace=0.2, hspace=0.4)
+	plt.xticks(rotation=0)
+	plt.savefig('FEC_DonationData', bbox_inches='tight')
+
+	plt.show()
 
 	return
 
@@ -995,7 +1081,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 
 ''' --- Run DonorCounter() --- '''
-DonorCounter()
+# DonorCounter()
 ''' -------------------------- '''
 
 
@@ -1008,10 +1094,14 @@ DonorCounter()
 #     time.sleep(1)
 # sched.shutdown()
 
+''' --- Federal Election Commission --- '''
+# FEC()
+''' ----------------------------------- '''
+
 
 ''' --- Run NationalPolling() --- '''
 NationalPolling()
-''' --------------------- '''
+''' ----------------------------- '''
 
 
 ''' ----------------------------------------- CampaignBetting() ----------------------------------------- '''
@@ -1025,8 +1115,8 @@ NationalPolling()
 
 
 ''' --- Run CampaignBetting() --- '''
-df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
-PlotCampaignBetting()
+# df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
+# PlotCampaignBetting()
 # --- Sorting Campaign ---
 # SortCampaignBettingCSV()
 ''' --------------------------- '''
