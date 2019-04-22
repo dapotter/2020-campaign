@@ -19,13 +19,15 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from apscheduler.schedulers.background import BackgroundScheduler
 
+import tabula
+import PyPDF2
+
 import re
 
 import glob
 import os
 
 sched = BackgroundScheduler()
-
 
 # Create original dataframe once:
 def DonorCounter():
@@ -123,11 +125,11 @@ def DonorCounter():
 	start_date = current_time
 	date_step = datetime.timedelta(days=7)
 	projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,400))]
-	# print('projected_dates:', projected_dates)
 	projected_dates_float = mdates.date2num(projected_dates)
 	projected_donor_count = linfit(projected_dates_float)
+	# print('projected_dates:', projected_dates)
 	# print('projected_donor_count:\n', projected_donor_count)
-	# print('shape projected_donor_count:\n', np.shape(projected_donor_count))
+	print('shape projected_donor_count:\n', np.shape(projected_donor_count))
 	projected_datetime_200k = projected_dates[np.flatnonzero(projected_donor_count > 200000)[0]] # np.where also works but returns a 1-element tuple
 	projected_date_200k = projected_datetime_200k.strftime('%b %d, %Y')
 	print('projected_date_200k:', projected_date_200k)
@@ -168,20 +170,82 @@ def DonorCounter():
 def FEC():
 	# Plots Federal Election Commission's public records of donations to each political candidate
 	# Columns: contribution_receipt_date and contribution_receipt_amount
-	FEC_files_path = '/home/dp/Documents/Campaign/FEC/'
-	FEC_files = glob.glob(os.path.join(FEC_files_path, '*.csv')) # H500 file paths in a list
 
-	fields = ['committee_name','contributor_name','contribution_receipt_date','contribution_receipt_amount']
+	FEC_files_path = '/home/dp/Documents/Campaign/FEC/'
+	FEC_files = glob.glob(os.path.join(FEC_files_path, '*Itemized.csv')) # H500 file paths in a list
+
+	
+	fields = ['committee_name','contribution_receipt_date','contribution_receipt_amount', 'contributor_last_name'] # 'contributor_name'
 	df_gen = (pd.read_csv(f, header='infer', usecols=fields) for f in FEC_files)
 	df = pd.concat(df_gen, axis=0, sort=True)
+	df.drop(labels = df[df['contributor_last_name']=='ActBlue'].index, axis=0, inplace=True)
+	print('df:\n', df)
+
+	FEC_contribution_size_files = glob.glob(os.path.join(FEC_files_path, '*ContributionSize.csv')) # H500 file paths in a list
+	fields = ['committee_name', 'cycle', 'total', 'count', 'size']
+	df_gen = (pd.read_csv(f, header='infer', usecols=fields) for f in FEC_contribution_size_files)
+	df_contribution_size = pd.concat(df_gen, axis=0, sort=True)
+	df_contribution_size.fillna(0, inplace=True)
+	print('df_contribution_size:\n', df_contribution_size)
+
+
+	# # Importing pdf files:
+	# FEC_pdf_files = glob.glob(os.path.join(FEC_files_path, '*.pdf'))
+	# print('FEC_pdf_files[0]:\n', FEC_pdf_files[0])
+
+	# # PyPDF2:
+	# pdfFileName = FEC_pdf_files[0] #filename of your PDF/directory where your PDF is stored
+	# # creating a pdf file object
+	# pdfFileObj = open(pdfFileName, 'rb')
+	# # creating a pdf reader object
+	# pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
+	# # printing number of pages in pdf file
+	# print(pdfReader.numPages)
+	# # creating a page object
+	# pageObj = pdfReader.getPage(30)
+	# # extracting text from page
+	# print(pageObj.extractText())
+	# # closing the pdf file object
+	# pdfFileObj.close()
+
+	# # Tabula:
+	# path = FEC_pdf_files[0]
+	# print('pdf file path:\n', path)
+	# path = path.replace('/','\\')
+	# print('pdf file path formatted:\n', path)
+	# # path = 'C:\\Users\\Himanshu Poddar\\Desktop\\datathon\\Himachal\\'  + file
+	# df = tabula.read_pdf(path, pages = '1', multiple_tables = True)
+	# print(df)
+
+
 
 	# REPLACING COMMITTEE NAMES. NEED TO USE BETTER METHOD.
 	# df.replace('DONALD J. TRUMP FOR PRESIDENT, INC.','Trump', inplace=True)
 	# df.replace('TRUMP MAKE AMERICA GREAT AGAIN COMMITTEE','Trump (MAGA)', inplace=True)
 	# df.replace('TRUMP VICTORY','Trump (Victory)', inplace=True)
 	df.replace('ELIZABETH WARREN ACTION FUND','Warren', inplace=True)
-	df.replace('FRIENDS OF BERNIE SANDERS','Sanders', inplace=True)
+	df.replace('WARREN FOR PRESIDENT, INC.','Warren', inplace=True)
+	df.replace('BERNIE 2020','Sanders', inplace=True)
 	df.replace('FRIENDS OF ANDREW YANG','Yang', inplace=True)
+	df.replace('TULSI NOW','Gabbard', inplace=True)
+	df.replace('AMY FOR AMERICA','Klobuchar', inplace=True)
+	df.replace('BETO FOR AMERICA','ORourke', inplace=True)
+	df.replace('JULIAN FOR THE FUTURE','Castro', inplace=True)
+	df.replace('PETE FOR AMERICA, INC.','Buttigieg', inplace=True)
+	df.replace('CORY 2020','Booker', inplace=True)
+	df.replace('KAMALA HARRIS FOR THE PEOPLE','Harris', inplace=True)
+
+	df_contribution_size.replace('ELIZABETH WARREN ACTION FUND','Warren', inplace=True)
+	df_contribution_size.replace('WARREN FOR PRESIDENT, INC.','Warren', inplace=True)
+	df_contribution_size.replace('BERNIE 2020','Sanders', inplace=True)
+	df_contribution_size.replace('FRIENDS OF ANDREW YANG','Yang', inplace=True)
+	df_contribution_size.replace('TULSI NOW','Gabbard', inplace=True)
+	df_contribution_size.replace('AMY FOR AMERICA','Klobuchar', inplace=True)
+	df_contribution_size.replace('BETO FOR AMERICA','ORourke', inplace=True)
+	df_contribution_size.replace('JULIAN FOR THE FUTURE','Castro', inplace=True)
+	df_contribution_size.replace('PETE FOR AMERICA, INC.','Buttigieg', inplace=True)
+	df_contribution_size.replace('CORY 2020','Booker', inplace=True)
+	df_contribution_size.replace('KAMALA HARRIS FOR THE PEOPLE','Harris', inplace=True)
 
 
 	print('df:\n', df)
@@ -196,6 +260,151 @@ def FEC():
 
 	df.reset_index(inplace=True)
 
+
+
+	''' Using Contribution Size data to determine fractions of various donation amounts: '''
+	df_cs_below_200 = df_contribution_size[df_contribution_size['size']==0].set_index('committee_name')
+	df_cs_200_to_499 = df_contribution_size[df_contribution_size['size']==200]
+	df_cs_500_to_999 = df_contribution_size[df_contribution_size['size']==500]
+	df_cs_1000_to_1999 = df_contribution_size[df_contribution_size['size']==1000]
+	df_cs_above_2000 = df_contribution_size[df_contribution_size['size']==2000]
+	print('df_cs_below_200:\n', df_cs_below_200)
+	print('df_cs_1000_to_1999:\n', df_cs_1000_to_1999)
+	df_cs_all = df_contribution_size.groupby('committee_name')['total'].sum()
+	print('df_cs_all:\n', df_cs_all)
+	df_cs_pcnt_below_200 = df_cs_below_200['total'] / df_cs_all * 100
+	print('df_cs_pcnt_below_200:\n', df_cs_pcnt_below_200)
+	df_cs_pcnt_above_2000 = df_cs_above_2000['total'] / df_cs_all * 100
+	print('df_cs_pcnt_above_2000:\n', df_cs_pcnt_above_2000)
+
+
+	plt.close()
+	# Plotting bar plots of fraction of donors giving under $200:
+	f,ax = plt.subplots(1,2, figsize=(8,4))
+	df_cs_pcnt_below_200.plot.bar(use_index=True, ax=ax[0], rot=90, legend=False, color='gray')
+	df_cs_pcnt_above_2000.plot.bar(use_index=True, ax=ax[1], rot=90, legend=False, color='gray')
+	# df_below_200_pcnt_2019.plot.bar(use_index=True, ax=ax[0,1], rot=90, legend=False, color='#bf8957')
+	# df_above_2700_pcnt.plot.bar(use_index=True, ax=ax[1,0], rot=90, legend=False, color='#3d5782')
+	# df_above_2700_pcnt_2019.plot.bar(use_index=True, ax=ax[1,1], rot=90, legend=False, color='#5e85c4')
+	# Modify axes:
+	ax[0].set_ylabel('% Donations < $200'); ax[0].set_title('Q1 2019')
+	# ax[0,1].set_title('Q1 2019')
+	# ax[1,0].set_xlabel('Candidate'); ax[1,0].set_ylabel('% Donations > $2700')
+	# ax[1,1].set_xlabel('Candidate')
+
+	# Turn off x-axis labels and x-axis tick labels for top three plots:
+	# x_axis = ax[0,0].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
+	# x_axis = ax[0,1].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
+	# Savefig and show:
+	plt.savefig('FEC_Pcnt_Donations_Under_200.png', bbox_inches='tight')
+	plt.show()
+
+	return
+
+	''' Plotting: Percentage of all donations below and above various thresholds '''
+	df_below_200_count = df.groupby('committee_name')['contribution_receipt_amount'].apply(lambda x: (x<=200).sum())#.reset_index(name='count')
+	df_all_count = df.groupby('committee_name')['contribution_receipt_amount'].agg('count')
+	print('df_below_200_count:\n', df_below_200_count)
+	print('df_all_count:\n', df_all_count)
+	df_below_200_pcnt = round(df_below_200_count / df_all_count * 100)
+	df_below_200_pcnt.sort_values(ascending=True, inplace=True)
+	print('df_below_200_pcnt:\n', df_below_200_pcnt)
+
+
+
+	# PLOT POLLING NUMBERS PER DOLLAR RAISED
+	# PLOT POLLING NUMBERS PER TV COVERAGE
+
+	# Plotting percent of all donations under $200 and over $2700
+	# for all time and 2019 (presidential bids):
+	date_object = datetime.date(2019,1,1)
+	print('date_object:\n', date_object)
+	df_below_200_count_2019 = df[df['contribution_receipt_date'] > date_object].groupby('committee_name')['contribution_receipt_amount'].apply(lambda x: (x<=200).sum())#.reset_index(name='count')
+	df_all_count_2019 = df[df['contribution_receipt_date'] > date_object].groupby('committee_name')['contribution_receipt_amount'].agg('count')
+	print('df_below_200_count_2019:\n', df_below_200_count_2019)
+	print('df_all_count_2019:\n', df_all_count_2019)
+	df_below_200_pcnt_2019 = round(df_below_200_count_2019 / df_all_count_2019 * 100)
+	df_below_200_pcnt_2019.sort_values(ascending=True, inplace=True)
+	print('df_below_200_pcnt_2019:\n', df_below_200_pcnt_2019)
+	
+	
+	df_above_2700_count = df.groupby('committee_name')['contribution_receipt_amount'].apply(lambda x: (x>2700).sum())
+	df_all_count = df.groupby('committee_name')['contribution_receipt_amount'].agg('count')
+	print('df_above_2700_count:\n', df_above_2700_count)
+	df_above_2700_pcnt = round(df_above_2700_count / df_all_count * 100)
+	df_above_2700_pcnt.sort_values(ascending=True, inplace=True)
+	print('df_above_2700_pcnt:\n', df_above_2700_pcnt)
+
+	# Plotting percent of all donations under $200 and over $2700
+	# for all time and 2019 (presidential bids):
+	date_object = datetime.date(2019,1,1)
+	print('date_object:\n', date_object)
+	df_above_2700_count_2019 = df[df['contribution_receipt_date'] > date_object].groupby('committee_name')['contribution_receipt_amount'].apply(lambda x: (x>2700).sum())#.reset_index(name='count')
+	df_all_count_2019 = df[df['contribution_receipt_date'] > date_object].groupby('committee_name')['contribution_receipt_amount'].agg('count')
+	print('df_above_2700_count_2019:\n', df_above_2700_count_2019)
+	print('df_all_count_2019:\n', df_all_count_2019)
+	df_above_2700_pcnt_2019 = round(df_above_2700_count_2019 / df_all_count_2019 * 100)
+	df_above_2700_pcnt_2019.sort_values(ascending=True, inplace=True)
+	print('df_above_2700_pcnt_2019:\n', df_above_2700_pcnt_2019)
+	
+	plt.close()
+	# Plotting bar plots of fraction of donors giving under $200:
+	f,ax = plt.subplots(2,2, figsize=(8,4))
+	df_below_200_pcnt.plot.bar(use_index=True, ax=ax[0,0], rot=90, legend=False, color='#825e3d')
+	df_below_200_pcnt_2019.plot.bar(use_index=True, ax=ax[0,1], rot=90, legend=False, color='#bf8957')
+	df_above_2700_pcnt.plot.bar(use_index=True, ax=ax[1,0], rot=90, legend=False, color='#3d5782')
+	df_above_2700_pcnt_2019.plot.bar(use_index=True, ax=ax[1,1], rot=90, legend=False, color='#5e85c4')
+	# Modify axes:
+	ax[0,0].set_ylabel('% Donations < $200'); ax[0,0].set_title('Jan 1, 2017 - Apr 15, 2019')
+	ax[0,1].set_title('Q1 2019')
+	ax[1,0].set_xlabel('Candidate'); ax[1,0].set_ylabel('% Donations > $2700')
+	ax[1,1].set_xlabel('Candidate')
+	# Turn off x-axis labels and x-axis tick labels for top three plots:
+	# x_axis = ax[0,0].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
+	# x_axis = ax[0,1].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
+	# Savefig and show:
+	plt.savefig('FEC_Pcnt_Donations_Under_200.png', bbox_inches='tight')
+	plt.show()
+
+
+	plt.close()
+	# Plotting histogram of Yang, Bernie and Klobuchar donation amounts:
+	df_yang = df[df['committee_name'] == 'Yang']
+	df_sanders = df[df['committee_name'] == 'Sanders']
+	df_klobuchar = df[df['committee_name'] == 'Klobuchar']
+	f,ax = plt.subplots(1,3, figsize=(8,4))
+	df_yang.hist(column='contribution_receipt_amount', ax=ax[0], bins=100, rwidth=0.95)
+	df_sanders.hist(column='contribution_receipt_amount', ax=ax[1], bins=100, rwidth=0.95)
+	df_klobuchar.hist(column='contribution_receipt_amount', ax=ax[2], bins=100, rwidth=0.95)
+	# Modify axes:
+	ax[0].set_xlim(-50,5000)
+	ax[0].set_title('Yang Donations')
+	ax[0].set_xlabel('Donation Amount')
+	ax[0].set_ylabel('Donation Count')
+	ax[1].set_xlim(-50,5000)
+	ax[1].set_title('Sanders Donations')
+	ax[1].set_xlabel('Donation Amount')
+	ax[2].set_xlim(-50,5000)
+	ax[2].set_title('Klobuchar Donations')
+	ax[2].set_xlabel('Donation Amount')
+	# Savefig and show:
+	plt.savefig('FEC_Yang_Sanders_Donation_Count_Hist.png', bbox_inches='tight')
+	plt.show()
+
+
+	# Aggregated df for plotting the following:
+	# Sum: Total money donated to each candidate's PAC
+	# Count: Total number of unique donations
+	# Mean: Average donation size in dollars
+	# Std: Standard deviation of the donation amounts
+	df_stats = df.set_index('committee_name')['contribution_receipt_amount']
+	df_stats = df_stats.groupby(['committee_name']).agg(['sum','count','mean','std'])
+	df_stats['sum'] = df_stats['sum'] / 100000
+	df_stats['count'] = df_stats['count'] / 1000
+	print('df_stats:\n', df_stats)
+
+
+	plt.close()
 	# Plotting: Time Series of cumulative sum of donation amounts
 	df_timeseries_donation_amount = df.set_index('contribution_receipt_date')[['committee_name', 'contribution_receipt_amount']]
 	df_timeseries_donation_amount['cumsum'] = df_timeseries_donation_amount.groupby('committee_name')['contribution_receipt_amount'].apply(lambda x: x.cumsum())
@@ -203,43 +412,33 @@ def FEC():
 	print('df_timeseries_donation_amount:\n', df_timeseries_donation_amount)
 	plt.ylabel('Cumulative Donation Amount, $')
 	plt.xlabel('Date')
-	plt.savefig('FEC_DonationTimeSeries', bbox_inches='tight')
+	plt.savefig('FEC_Donation_Time_Series.png', bbox_inches='tight')
 	plt.show()
 
-	df_stats = df.set_index('committee_name')['contribution_receipt_amount']
-	df_stats = df_stats.groupby(['committee_name']).agg(['sum','count','mean','std'])
-	df_stats['sum'] = df_stats['sum'] / 100000
-	print('df_stats:\n', df_stats)
 
-
-	# Plotting: Total donation amount, unique donors, average donation amount:
 	plt.close()
+	# Plotting: Total donation amount, unique donors, average donation amount:
 	fig, ax = plt.subplots(nrows=4, ncols=1, figsize=(3,10))
-	# df_total_donation_amount.plot.bar(use_index=True, ax=ax[0], rot=0, color='gray')
-	# df_total_unique_donations.plot.bar(use_index=True, ax=ax[1], rot=0, color='k')
-	# df_amount_unique_ratio.plot.bar(use_index=True, ax=ax[2], rot=0, color='r')
 	df_stats.plot.bar(y='sum', use_index=True, ax=ax[0], rot=0, legend=False, color='gray')
 	df_stats.plot.bar(y='count', use_index=True, ax=ax[1], rot=0, legend=False, color='k')
 	df_stats.plot.bar(y='mean', yerr='std', use_index=True, ax=ax[2], rot=0, legend=False, color='r')
 	df.boxplot(column='contribution_receipt_amount', by='committee_name', ax=ax[3], rot=0)
-	
-	# Setting axis parameters:
-	ax[0].set_ylabel('Donation Total, $1000')
-	ax[1].set_ylabel('Unique Donations')
+	# Modify axes:
+	ax[0].set_ylabel('Donation Total, $100k')
+	ax[1].set_ylabel('Unique Donations, 1000\'s')
 	ax[2].set_ylabel('Avg Donation, $')
 	ax[3].set_ylabel('Donation Amount, $'); ax[3].set_xlabel('PAC'); ax[3].set_title('')
-	
-	# Turn off x-axis labels and x-axis tick labels:
+	# Turn off x-axis labels and x-axis tick labels for top three plots:
 	x_axis = ax[0].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
 	x_axis = ax[1].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
 	x_axis = ax[2].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
-
+	# Savefig and show:
 	plt.suptitle('')
-	plt.subplots_adjust(left=0.2, right=0.9, bottom=0.1, top=0.9, wspace=0.2, hspace=0.4)
-	plt.xticks(rotation=0)
-	plt.savefig('FEC_DonationData', bbox_inches='tight')
-
+	plt.subplots_adjust(left=0.2, right=0.9, bottom=0.1, top=0.9, wspace=0.2, hspace=0.15)
+	plt.xticks(rotation=90)
+	plt.savefig('FEC_Donation_Data', bbox_inches='tight')
 	plt.show()
+
 
 	return
 
@@ -930,21 +1129,21 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 	df.drop(df_no_dt_index, inplace=True)
 	print('***************************************df:\n', df.to_string())
 
-	# # Line plots
-	# cols = [col for col in df.columns if col != 'Name' and col != 'Date']
-	# print('cols:\n', cols)
-	# for title in cols:
-	# 	fig, ax = plt.subplots(figsize=(8,6))
-	# 	for label, d in df.groupby('Name'):
-	# 		d.plot(x='Date', y=title, kind='line', ax=ax, label=label, title=title)
-	# 	plt.legend(); plt.xlabel('Date'); plt.ylabel(title)
-	# 	plt.savefig('TwitterMetrics '+title, bbox_inches='tight')
+	''' Time Series Line Plots '''
+	cols = [col for col in df.columns if col != 'Name' and col != 'Date']
+	print('cols:\n', cols)
+	for title in cols:
+		fig, ax = plt.subplots(figsize=(8,6))
+		for label, d in df.groupby('Name'):
+			d.plot(x='Date', y=title, kind='line', ax=ax, label=label, title=title)
+		plt.legend(); plt.xlabel('Date'); plt.ylabel(title)
+		plt.savefig('TwitterMetrics '+title, bbox_inches='tight')
 
-	# # Boxplot of Daily Followers Gained:
-	# df.boxplot(column='Daily Followers Gained', by='Name')#; plt.xlabel('Date'); plt.ylabel('Daily Followers Gained')
-	# plt.xticks(rotation='vertical'); plt.ylabel('Daily Followers Gained')
-	# plt.savefig('TwitterMetrics Daily Followers Gained Boxplot', bbox_inches='tight')
-	# plt.show()
+	# Boxplot of Daily Followers Gained:
+	df.boxplot(column='Daily Followers Gained', by='Name')#; plt.xlabel('Date'); plt.ylabel('Daily Followers Gained')
+	plt.xticks(rotation='vertical'); plt.ylabel('Daily Followers Gained')
+	plt.savefig('TwitterMetrics Daily Followers Gained Boxplot', bbox_inches='tight')
+	plt.show()
 
 	''' Plotting % Growth: '''
 	# convert timedelta_str to timedelta object
@@ -1095,12 +1294,12 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 # sched.shutdown()
 
 ''' --- Federal Election Commission --- '''
-# FEC()
+FEC()
 ''' ----------------------------------- '''
 
 
 ''' --- Run NationalPolling() --- '''
-NationalPolling()
+# NationalPolling()
 ''' ----------------------------- '''
 
 
@@ -1129,7 +1328,7 @@ NationalPolling()
 						# THE LATEST 30 DAYS OF TWITTER DATA. CURRENT CSV FILES ARE BACKED UP IN THE
 						# FOLDER 'Campaign/TwitterMetrics csv backup'. WebMetrics() NEEDS THE CAPABILITY
 						# TO LOAD CSV DATA, ADD THE MOST RECENT SCRAPED DATA TO IT AND WRITE BACK TO CSV.
-#PlotWebMetrics(['2019,3,1','2019,3,8','2019,3,15','2019,3,22'],['2019,3,8','2019,3,15','2019,3,22','2019,3,25'])
+# PlotWebMetrics(['2019,3,15','2019,3,22','2019,3,29','2019,4,5'],['2019,3,22','2019,3,29','2019,4,5','2019,4,14'])
 ''' ----------------------------- '''
 
 
