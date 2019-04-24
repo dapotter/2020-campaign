@@ -19,9 +19,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from apscheduler.schedulers.background import BackgroundScheduler
 
-import tabula
-import PyPDF2
-
 import re
 
 import glob
@@ -82,6 +79,13 @@ def DonorCounter():
 	# Check formatting:
 	#print('time type:\n', type(df.iloc[0]['Time']))
 
+	# Calculate donor growth rate:
+	x = mdates.date2num(df.Time.values) # Time values converted to floats
+	print('Time values converted to numbers:\n', x)
+	y = df['Count'].values # Counts
+	growth_rate = np.gradient(y,x)
+	df['Rate'] = growth_rate
+
 	print('Donor Count df:\n', df.to_string())
 
 	# Pickle out:
@@ -96,43 +100,57 @@ def DonorCounter():
 	current_time = datetime.datetime.now()
 	print('current time:', current_time)
 	one_wk_timedelta = datetime.timedelta(days=7)
+	one_mnth_timedelta = datetime.timedelta(days=30)
 	print('one_wk_timedelta:', one_wk_timedelta)
 	one_wk_prior_time = current_time - one_wk_timedelta
+	one_mnth_prior_time = current_time - one_mnth_timedelta
 	print('one_wk_prior_time:', one_wk_prior_time)
 	
 	
 	df['Time'] = pd.to_datetime(df['Time'])
 	df.set_index('Time', inplace=True)
-	df_one_wk = df.loc[one_wk_prior_time:current_time]
-	print('df_one_wk:\n', df_one_wk)
+	df_7_days = df.loc[one_wk_prior_time:current_time]
+	df_30_days = df.loc[one_mnth_prior_time:current_time]
+	print('df_7_days:\n', df_7_days)
 
 	# mask = (df['Time'] >= one_wk_prior_time) & (df['Time'] <= current_time)
-	# df_one_wk = df.loc[mask]
-	# print('df_one_wk:\n', df_one_wk)
-	dates_float = mdates.date2num(df_one_wk.index)
-	print('dates_float:\n', dates_float)
-	count_one_wk = df_one_wk.loc[:,'Count']
-	print('df_one_wk.loc[:,"Count"]:\n', df_one_wk.loc[:,'Count'])
+	# df_7_days = df.loc[mask]
+	# print('df_7_days:\n', df_7_days)
+	dates_float_7_days = mdates.date2num(df_7_days.index)
+	dates_float_30_days = mdates.date2num(df_30_days.index)
+	print('dates_float:\n', dates_float_7_days)
 
-	pfit = np.polyfit(x=dates_float, y=count_one_wk, deg=1)
-	linfit = np.poly1d(pfit)
+	count_7_days = df_7_days.loc[:,'Count']
+	count_30_days = df_30_days.loc[:,'Count']
+	print('df_7_days.loc[:,"Count"]:\n', df_7_days.loc[:,'Count'])
+
+	pfit_7_days = np.polyfit(x=dates_float_7_days, y=count_7_days, deg=1)
+	linfit_7_days = np.poly1d(pfit_7_days)
+	pfit_30_days = np.polyfit(x=dates_float_30_days, y=count_30_days, deg=1)
+	linfit_30_days = np.poly1d(pfit_30_days)
 
 	#df.reset_index(inplace=True)
-	df_one_wk['Trendline'] = linfit(dates_float)
-	print('df_one_wk with Trendline:\n', df_one_wk)
+	df_7_days['Trendline 1 Week'] = linfit_7_days(dates_float_7_days)
+	df_30_days['Trendline 1 Month'] = linfit_30_days(dates_float_30_days)
+	print('df_7_days with Trendline:\n', df_7_days)
+
 
 	# 200k donor prediction date:
 	start_date = current_time
-	date_step = datetime.timedelta(days=7)
-	projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,400))]
+	# date_step = datetime.timedelta(days=7)
+	projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,500))]
 	projected_dates_float = mdates.date2num(projected_dates)
-	projected_donor_count = linfit(projected_dates_float)
+	projected_donor_count_7_days = linfit_7_days(projected_dates_float)
+	projected_donor_count_30_days = linfit_30_days(projected_dates_float)
+
 	# print('projected_dates:', projected_dates)
 	# print('projected_donor_count:\n', projected_donor_count)
-	print('shape projected_donor_count:\n', np.shape(projected_donor_count))
-	projected_datetime_200k = projected_dates[np.flatnonzero(projected_donor_count > 200000)[0]] # np.where also works but returns a 1-element tuple
-	projected_date_200k = projected_datetime_200k.strftime('%b %d, %Y')
-	print('projected_date_200k:', projected_date_200k)
+	print('shape projected_donor_count_7_days:\n', np.shape(projected_donor_count_7_days))
+	projected_datetime_200k_7_days = projected_dates[np.flatnonzero(projected_donor_count_7_days > 200000)[0]] # np.where also works but returns a 1-element tuple
+	projected_date_200k_7_days = projected_datetime_200k_7_days.strftime('%b %d, %Y')
+	print('projected_date_200k_7_days:', projected_date_200k_7_days)
+	projected_datetime_200k_30_days = projected_dates[np.flatnonzero(projected_donor_count_30_days > 200000)[0]] # np.where also works but returns a 1-element tuple
+	projected_date_200k_30_days = projected_datetime_200k_30_days.strftime('%b %d, %Y')
 
 	# ''' Plotting data: '''
 	#fig = plt.figure()
@@ -140,13 +158,21 @@ def DonorCounter():
 	h = 3
 	#fig = plt.figure(frameon=False)
 	#fig.set_size_inches(w,h)
-	plt.figure()
-	plt.plot(df.index, df['Count'], linewidth=1, color='k', marker='o', markersize=3, markerfacecolor='none', markeredgecolor='k')
-	plt.plot(df_one_wk.index, df_one_wk['Trendline'], color='r')
-	plt.xlabel('DateTime'); plt.ylabel('Number of donors')
-	plt.xticks(rotation=45)
-	plt.legend(labels=['Donor count','7-day trend'])
-	plt.title('200k donors projected date: {0}'.format(projected_date_200k))
+	f, ax1 = plt.subplots(figsize=(8,8))
+	ax2 = ax1.twinx()
+	ax1.plot(df.index, df['Count'], linewidth=1, color='k', marker='o', markersize=3, markerfacecolor='none', markeredgecolor='k')
+	ax1.plot(df_7_days.index, df_7_days['Trendline 1 Week'], color='r')
+	ax1.plot(df_30_days.index, df_30_days['Trendline 1 Month'], color='#b2b74e')
+	ax2.plot(df.index, df['Rate'], linewidth=1, color='#4b7a46', marker='^', markersize=3, markerfacecolor='none', markeredgecolor='#4b7a46')
+	ax1.set_xlabel('DateTime', color='k')
+	ax1.set_ylabel('Number of donors', color='k')
+	ax1.tick_params('y', colors='k')
+	ax1.legend(labels=['Donor count','7-day trend','30-day trend'])
+	ax2.set_ylabel('Donors/Day', color='#4b7a46')
+	ax2.tick_params('y', colors='#4b7a46')
+	ax2.legend(labels=['Donor growth'])
+	f.autofmt_xdate()
+	plt.title('200k donors projected date: {0} or {1}'.format(projected_date_200k_7_days, projected_date_200k_30_days))
 	plt.savefig('DonorCountYang.png', bbox_inches='tight')
 	plt.show()
 	# ''' --------------- '''
@@ -187,37 +213,6 @@ def FEC():
 	df_contribution_size = pd.concat(df_gen, axis=0, sort=True)
 	df_contribution_size.fillna(0, inplace=True)
 	print('df_contribution_size:\n', df_contribution_size)
-
-
-	# # Importing pdf files:
-	# FEC_pdf_files = glob.glob(os.path.join(FEC_files_path, '*.pdf'))
-	# print('FEC_pdf_files[0]:\n', FEC_pdf_files[0])
-
-	# # PyPDF2:
-	# pdfFileName = FEC_pdf_files[0] #filename of your PDF/directory where your PDF is stored
-	# # creating a pdf file object
-	# pdfFileObj = open(pdfFileName, 'rb')
-	# # creating a pdf reader object
-	# pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
-	# # printing number of pages in pdf file
-	# print(pdfReader.numPages)
-	# # creating a page object
-	# pageObj = pdfReader.getPage(30)
-	# # extracting text from page
-	# print(pageObj.extractText())
-	# # closing the pdf file object
-	# pdfFileObj.close()
-
-	# # Tabula:
-	# path = FEC_pdf_files[0]
-	# print('pdf file path:\n', path)
-	# path = path.replace('/','\\')
-	# print('pdf file path formatted:\n', path)
-	# # path = 'C:\\Users\\Himanshu Poddar\\Desktop\\datathon\\Himachal\\'  + file
-	# df = tabula.read_pdf(path, pages = '1', multiple_tables = True)
-	# print(df)
-
-
 
 	# REPLACING COMMITTEE NAMES. NEED TO USE BETTER METHOD.
 	# df.replace('DONALD J. TRUMP FOR PRESIDENT, INC.','Trump', inplace=True)
@@ -278,9 +273,11 @@ def FEC():
 	print('df_cs_pcnt_above_2000:\n', df_cs_pcnt_above_2000)
 
 
+	# I LEFT OFF HERE AND THIS PLOT ISN'T WORKING DUE TO MISSING DATA IN BERNIE'S AND KAMALA'S
+	# CONTRIBUTION SIZE FILES
 	plt.close()
 	# Plotting bar plots of fraction of donors giving under $200:
-	f,ax = plt.subplots(1,2, figsize=(8,4))
+	f,ax = plt.subplots(1,2, figsize=(8,5))
 	df_cs_pcnt_below_200.plot.bar(use_index=True, ax=ax[0], rot=90, legend=False, color='gray')
 	df_cs_pcnt_above_2000.plot.bar(use_index=True, ax=ax[1], rot=90, legend=False, color='gray')
 	# df_below_200_pcnt_2019.plot.bar(use_index=True, ax=ax[0,1], rot=90, legend=False, color='#bf8957')
@@ -295,11 +292,10 @@ def FEC():
 	# Turn off x-axis labels and x-axis tick labels for top three plots:
 	# x_axis = ax[0,0].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
 	# x_axis = ax[0,1].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
+	plt.suptitle('Itemized Donations')
 	# Savefig and show:
 	plt.savefig('FEC_Pcnt_Donations_Under_200.png', bbox_inches='tight')
 	plt.show()
-
-	return
 
 	''' Plotting: Percentage of all donations below and above various thresholds '''
 	df_below_200_count = df.groupby('committee_name')['contribution_receipt_amount'].apply(lambda x: (x<=200).sum())#.reset_index(name='count')
@@ -349,7 +345,7 @@ def FEC():
 	
 	plt.close()
 	# Plotting bar plots of fraction of donors giving under $200:
-	f,ax = plt.subplots(2,2, figsize=(8,4))
+	f,ax = plt.subplots(2,2, figsize=(8,8))
 	df_below_200_pcnt.plot.bar(use_index=True, ax=ax[0,0], rot=90, legend=False, color='#825e3d')
 	df_below_200_pcnt_2019.plot.bar(use_index=True, ax=ax[0,1], rot=90, legend=False, color='#bf8957')
 	df_above_2700_pcnt.plot.bar(use_index=True, ax=ax[1,0], rot=90, legend=False, color='#3d5782')
@@ -362,6 +358,7 @@ def FEC():
 	# Turn off x-axis labels and x-axis tick labels for top three plots:
 	# x_axis = ax[0,0].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
 	# x_axis = ax[0,1].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
+	plt.suptitle('Itemized Donations')
 	# Savefig and show:
 	plt.savefig('FEC_Pcnt_Donations_Under_200.png', bbox_inches='tight')
 	plt.show()
@@ -373,20 +370,22 @@ def FEC():
 	df_sanders = df[df['committee_name'] == 'Sanders']
 	df_klobuchar = df[df['committee_name'] == 'Klobuchar']
 	f,ax = plt.subplots(1,3, figsize=(8,4))
-	df_yang.hist(column='contribution_receipt_amount', ax=ax[0], bins=100, rwidth=0.95)
-	df_sanders.hist(column='contribution_receipt_amount', ax=ax[1], bins=100, rwidth=0.95)
-	df_klobuchar.hist(column='contribution_receipt_amount', ax=ax[2], bins=100, rwidth=0.95)
+	df_yang.hist(column='contribution_receipt_amount', ax=ax[0], bins=100, rwidth=0.95, color='#142e7b')
+	df_sanders.hist(column='contribution_receipt_amount', ax=ax[1], bins=100, rwidth=0.95, color='#4a5410')
+	df_klobuchar.hist(column='contribution_receipt_amount', ax=ax[2], bins=100, rwidth=0.95, color='gray')
 	# Modify axes:
-	ax[0].set_xlim(-50,5000)
-	ax[0].set_title('Yang Donations')
+	upper_donation_limit = 1000 # Upper histogram donation limit in dollars
+	ax[0].set_xlim(-50,upper_donation_limit)
+	ax[0].set_title('Yang')
 	ax[0].set_xlabel('Donation Amount')
 	ax[0].set_ylabel('Donation Count')
-	ax[1].set_xlim(-50,5000)
-	ax[1].set_title('Sanders Donations')
+	ax[1].set_xlim(-50,upper_donation_limit)
+	ax[1].set_title('Sanders')
 	ax[1].set_xlabel('Donation Amount')
-	ax[2].set_xlim(-50,5000)
-	ax[2].set_title('Klobuchar Donations')
+	ax[2].set_xlim(-50,upper_donation_limit)
+	ax[2].set_title('Klobuchar')
 	ax[2].set_xlabel('Donation Amount')
+	plt.suptitle('Itemized Donations')
 	# Savefig and show:
 	plt.savefig('FEC_Yang_Sanders_Donation_Count_Hist.png', bbox_inches='tight')
 	plt.show()
@@ -399,32 +398,34 @@ def FEC():
 	# Std: Standard deviation of the donation amounts
 	df_stats = df.set_index('committee_name')['contribution_receipt_amount']
 	df_stats = df_stats.groupby(['committee_name']).agg(['sum','count','mean','std'])
-	df_stats['sum'] = df_stats['sum'] / 100000
-	df_stats['count'] = df_stats['count'] / 1000
+	df_stats['sum'] = df_stats['sum'] / 1000000		# Scaling by $1 million
+	df_stats['count'] = df_stats['count'] / 1000	# Scaling by $1000
 	print('df_stats:\n', df_stats)
 
 
 	plt.close()
 	# Plotting: Time Series of cumulative sum of donation amounts
+	plt.figure(figsize=(8,5))
 	df_timeseries_donation_amount = df.set_index('contribution_receipt_date')[['committee_name', 'contribution_receipt_amount']]
 	df_timeseries_donation_amount['cumsum'] = df_timeseries_donation_amount.groupby('committee_name')['contribution_receipt_amount'].apply(lambda x: x.cumsum())
 	df_timeseries_donation_amount.groupby('committee_name')['cumsum'].plot(y='cumsum', legend=True)
 	print('df_timeseries_donation_amount:\n', df_timeseries_donation_amount)
-	plt.ylabel('Cumulative Donation Amount, $')
+	plt.ylabel('Cumulative Donations, $')
 	plt.xlabel('Date')
+	plt.suptitle('Itemized Donations')
 	plt.savefig('FEC_Donation_Time_Series.png', bbox_inches='tight')
 	plt.show()
 
 
 	plt.close()
 	# Plotting: Total donation amount, unique donors, average donation amount:
-	fig, ax = plt.subplots(nrows=4, ncols=1, figsize=(3,10))
+	fig, ax = plt.subplots(nrows=4, ncols=1, figsize=(6,10))
 	df_stats.plot.bar(y='sum', use_index=True, ax=ax[0], rot=0, legend=False, color='gray')
 	df_stats.plot.bar(y='count', use_index=True, ax=ax[1], rot=0, legend=False, color='k')
 	df_stats.plot.bar(y='mean', yerr='std', use_index=True, ax=ax[2], rot=0, legend=False, color='r')
 	df.boxplot(column='contribution_receipt_amount', by='committee_name', ax=ax[3], rot=0)
 	# Modify axes:
-	ax[0].set_ylabel('Donation Total, $100k')
+	ax[0].set_ylabel('Donation Total, $1E6')
 	ax[1].set_ylabel('Unique Donations, 1000\'s')
 	ax[2].set_ylabel('Avg Donation, $')
 	ax[3].set_ylabel('Donation Amount, $'); ax[3].set_xlabel('PAC'); ax[3].set_title('')
@@ -436,6 +437,7 @@ def FEC():
 	plt.suptitle('')
 	plt.subplots_adjust(left=0.2, right=0.9, bottom=0.1, top=0.9, wspace=0.2, hspace=0.15)
 	plt.xticks(rotation=90)
+	plt.suptitle('Itemized Donations')
 	plt.savefig('FEC_Donation_Data', bbox_inches='tight')
 	plt.show()
 
@@ -784,7 +786,7 @@ def CampaignBetting():
 	BettingOdds_df_rep_field_pkl = df_rep_field.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_rep_field.pkl')
 	BettingOdds_df_pres_field_pkl = df_pres_field.to_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_pres_field.pkl')
 
-	return df_dem, df_rep, df_pres, df_dem_field, df_rep_field, df_pres_field
+	return
 
 
 
@@ -814,7 +816,7 @@ def PlotCampaignBetting():
 	plt.close()
 
 	# Pandas plotting of odds data for all three races:
-	fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(8,4))
+	fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12,4))
 	print('ax:\n', ax); print('fig:\n', fig)
 	df_dem_odds_top.plot(y=dem_odds_cols, use_index=True, title='Democratic Primary', ax=ax[0]); ax[0].set_ylabel('Odds, %')
 	df_rep_odds_top.plot(y=rep_odds_cols, use_index=True, title='Republican Primary', ax=ax[1])
@@ -1280,7 +1282,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 
 ''' --- Run DonorCounter() --- '''
-# DonorCounter()
+DonorCounter()
 ''' -------------------------- '''
 
 
@@ -1314,8 +1316,8 @@ FEC()
 
 
 ''' --- Run CampaignBetting() --- '''
-# df_dem_odds, df_rep_odds, df_pres_odds, df_dem_field, df_rep_field, df_pres_field = CampaignBetting()
-# PlotCampaignBetting()
+CampaignBetting()
+PlotCampaignBetting()
 # --- Sorting Campaign ---
 # SortCampaignBettingCSV()
 ''' --------------------------- '''
