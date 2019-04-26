@@ -138,7 +138,7 @@ def DonorCounter():
 	# 200k donor prediction date:
 	start_date = current_time
 	# date_step = datetime.timedelta(days=7)
-	projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,500))]
+	projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,800))]
 	projected_dates_float = mdates.date2num(projected_dates)
 	projected_donor_count_7_days = linfit_7_days(projected_dates_float)
 	projected_donor_count_30_days = linfit_30_days(projected_dates_float)
@@ -147,6 +147,9 @@ def DonorCounter():
 	# print('projected_donor_count:\n', projected_donor_count)
 	print('shape projected_donor_count_7_days:\n', np.shape(projected_donor_count_7_days))
 	projected_datetime_200k_7_days = projected_dates[np.flatnonzero(projected_donor_count_7_days > 200000)[0]] # np.where also works but returns a 1-element tuple
+	# SOMETIMES THE CODE ERRORS HERE. THIS IS THE RESULT OF THE PROJECTION NEVER REACHING 200,000
+	# DONORS BECAUSE THE RATE OF GROWTH IS TOO LOW. TO FIX: IN list(range(1,X)) ABOVE, MAKE X
+	# BIGGER UNTIL ERROR GOES AWAY. X IS THE NUMBER OF TIMESTEPS INTO THE FUTURE TO PROJECT.
 	projected_date_200k_7_days = projected_datetime_200k_7_days.strftime('%b %d, %Y')
 	print('projected_date_200k_7_days:', projected_date_200k_7_days)
 	projected_datetime_200k_30_days = projected_dates[np.flatnonzero(projected_donor_count_30_days > 200000)[0]] # np.where also works but returns a 1-element tuple
@@ -816,11 +819,17 @@ def PlotCampaignBetting():
 	plt.close()
 
 	# Pandas plotting of odds data for all three races:
-	fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12,4))
+	fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12,6)) # figsize(width, height)
 	print('ax:\n', ax); print('fig:\n', fig)
 	df_dem_odds_top.plot(y=dem_odds_cols, use_index=True, title='Democratic Primary', ax=ax[0]); ax[0].set_ylabel('Odds, %')
 	df_rep_odds_top.plot(y=rep_odds_cols, use_index=True, title='Republican Primary', ax=ax[1])
 	df_pres_odds_top.plot(y=pres_odds_cols, use_index=True, title='Presidential Race', ax=ax[2])
+	ax[0].legend(loc='center left')
+	ax[1].legend(loc='center left')
+	ax[2].legend(loc='center left')
+	# Turn off x-axis labels and x-axis tick labels for top three plots:
+	# x_axis = ax[0].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
+	# x_axis = ax[1].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
 	plt.savefig('Betting Odds - All Races.png', bbox_inches='tight')
 	plt.show()
 
@@ -1282,7 +1291,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 
 ''' --- Run DonorCounter() --- '''
-DonorCounter()
+# DonorCounter()
 ''' -------------------------- '''
 
 
