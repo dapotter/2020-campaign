@@ -216,6 +216,27 @@ def FEC():
 	df_contribution_size = pd.concat(df_gen, axis=0, sort=True)
 	df_contribution_size.fillna(0, inplace=True)
 	print('df_contribution_size:\n', df_contribution_size)
+	df_contribution_size.reset_index(drop=True, inplace=True)
+	# Index values where the donor count is 0.0. This happens only for donors < $200
+	criteria = df_contribution_size[df_contribution_size['count'] == 0.0].index
+	# # Multiply all < $200 donor totals by estimate factor to get an estimate of the < $200 donor count
+	# # The estimate factor assumes for donations < $200: 65% are $20, 20% are $50, 10% are $100, 5% are $200
+	# estimate_factor = (1/100) #(0.65/20 + 0.2/50 + 0.1/100 + 0.05/200)
+	# df_contribution_size['count'].iloc[criteria] = df_contribution_size['total'].iloc[criteria] * estimate_factor
+	# print('df_contribution_size with count estimates for donations < $200:\n', df_contribution_size)
+	
+	# Making a string column based on contribution size, will contain '$0-$199' for 0, '$200-$499' for 200, etc.
+	df_contribution_size['range'] = ['0-200' if size==0 else '200-499' if size==200 else '500-999' if size==500 else '1000-1999' if size==1000 else '>2000' for size in df_contribution_size['size']]
+	df_contribution_size['range'] = df_contribution_size['range'].apply(str)
+	df_contribution_size['total'] = df_contribution_size['total'] / 1E6
+	# df_contribution_size.set_index('committee_name', inplace=True)
+	# df_contribution_size.sort_values(by='size', inplace=True)
+	print('df_contribution_size with donation size ranges:\n', df_contribution_size.to_string())
+	df_contribution_size['pcnt'] = df_contribution_size.groupby('committee_name')['total'].apply(lambda x: x/x.sum()*100)
+	print('df_contribution_size with donor count percentage:\n', df_contribution_size.to_string())
+
+	# df_below_200_count = df.groupby('committee_name')['contribution_receipt_amount'].apply(lambda x: (x<=200).sum())#.reset_index(name='count')
+
 
 	# REPLACING COMMITTEE NAMES. NEED TO USE BETTER METHOD.
 	# df.replace('DONALD J. TRUMP FOR PRESIDENT, INC.','Trump', inplace=True)
@@ -245,7 +266,7 @@ def FEC():
 	df_contribution_size.replace('CORY 2020','Booker', inplace=True)
 	df_contribution_size.replace('KAMALA HARRIS FOR THE PEOPLE','Harris', inplace=True)
 
-
+	# Processing df:
 	print('df:\n', df)
 	df['contribution_receipt_date'] = pd.to_datetime(df['contribution_receipt_date'])
 	print('type(df["contribution_receipt_date"]:', type(df["contribution_receipt_date"].iloc[0]))
@@ -259,13 +280,30 @@ def FEC():
 	df.reset_index(inplace=True)
 
 
+	# Making plots from df_contribution_size:
 
-	''' Using Contribution Size data to determine fractions of various donation amounts: '''
+	# 1a) Stacked bar plot of donor amounts by range of donation amount
+	# 1b) Stacked bar plot of donor counts by range of donation amount
+	fig, ax = plt.subplots(1,2, figsize=(8,8))
+	colors = ["#006D2C", "#31A354","#74C476","#9cce9e","#c5d8c6"]
+	cols = df_contribution_size['range']
+	print('cols:\n', cols)
+
+	df_amount_pivot = df_contribution_size.pivot(index='committee_name', columns='size', values='total')
+	df_count_pivot = df_contribution_size.pivot(index='committee_name', columns='size', values='pcnt')
+	df_amount_pivot.plot.bar(stacked=True, color=colors, legend=True, ax=ax[0])
+	df_count_pivot.plot.bar(stacked=True, color=colors, legend=True, ax=ax[1])
+	ax[0].set_xlabel('Candidate'); ax[0].set_ylabel('Donation amount, $1E6')
+	ax[1].set_xlabel('Candidate'); ax[1].set_ylabel('Donation amount/Total amount, %')
+	plt.savefig('FEC_Donation_Range_Amounts_and_Pcnts.png', bbox_inches='tight')
+	plt.show()
+
+	# 2) Using Contribution Size data to determine fractions of various donation amounts:
 	df_cs_below_200 = df_contribution_size[df_contribution_size['size']==0].set_index('committee_name')
-	df_cs_200_to_499 = df_contribution_size[df_contribution_size['size']==200]
-	df_cs_500_to_999 = df_contribution_size[df_contribution_size['size']==500]
-	df_cs_1000_to_1999 = df_contribution_size[df_contribution_size['size']==1000]
-	df_cs_above_2000 = df_contribution_size[df_contribution_size['size']==2000]
+	df_cs_200_to_499 = df_contribution_size[df_contribution_size['size']==200].set_index('committee_name')
+	df_cs_500_to_999 = df_contribution_size[df_contribution_size['size']==500].set_index('committee_name')
+	df_cs_1000_to_1999 = df_contribution_size[df_contribution_size['size']==1000].set_index('committee_name')
+	df_cs_above_2000 = df_contribution_size[df_contribution_size['size']==2000].set_index('committee_name')
 	print('df_cs_below_200:\n', df_cs_below_200)
 	print('df_cs_1000_to_1999:\n', df_cs_1000_to_1999)
 	df_cs_all = df_contribution_size.groupby('committee_name')['total'].sum()
@@ -280,22 +318,20 @@ def FEC():
 	# CONTRIBUTION SIZE FILES
 	plt.close()
 	# Plotting bar plots of fraction of donors giving under $200:
-	f,ax = plt.subplots(1,2, figsize=(8,5))
+	f,ax = plt.subplots(1,2, figsize=(8,8))
 	df_cs_pcnt_below_200.plot.bar(use_index=True, ax=ax[0], rot=90, legend=False, color='gray')
 	df_cs_pcnt_above_2000.plot.bar(use_index=True, ax=ax[1], rot=90, legend=False, color='gray')
 	# df_below_200_pcnt_2019.plot.bar(use_index=True, ax=ax[0,1], rot=90, legend=False, color='#bf8957')
 	# df_above_2700_pcnt.plot.bar(use_index=True, ax=ax[1,0], rot=90, legend=False, color='#3d5782')
 	# df_above_2700_pcnt_2019.plot.bar(use_index=True, ax=ax[1,1], rot=90, legend=False, color='#5e85c4')
 	# Modify axes:
-	ax[0].set_ylabel('% Donations < $200'); ax[0].set_title('Q1 2019')
-	# ax[0,1].set_title('Q1 2019')
-	# ax[1,0].set_xlabel('Candidate'); ax[1,0].set_ylabel('% Donations > $2700')
-	# ax[1,1].set_xlabel('Candidate')
+	ax[0].set_xlabel('Candidate'); ax[0].set_ylabel('% Donations < $200'); ax[0].set_title('Q1 2019')
+	ax[1].set_xlabel('Candidate'); ax[1].set_ylabel('% Donations > $2700'); ax[1].set_title('Q1 2019')
 
 	# Turn off x-axis labels and x-axis tick labels for top three plots:
 	# x_axis = ax[0,0].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
 	# x_axis = ax[0,1].axes.get_xaxis(); x_label = x_axis.get_label(); x_label.set_visible(False); x_axis.set_ticklabels([])
-	plt.suptitle('Itemized Donations')
+	plt.suptitle('All Donations')
 	# Savefig and show:
 	plt.savefig('FEC_Pcnt_Donations_Under_200.png', bbox_inches='tight')
 	plt.show()
@@ -372,20 +408,21 @@ def FEC():
 	df_yang = df[df['committee_name'] == 'Yang']
 	df_sanders = df[df['committee_name'] == 'Sanders']
 	df_klobuchar = df[df['committee_name'] == 'Klobuchar']
-	f,ax = plt.subplots(1,3, figsize=(8,4))
+	f,ax = plt.subplots(1,3, figsize=(12,3))
 	df_yang.hist(column='contribution_receipt_amount', ax=ax[0], bins=100, rwidth=0.95, color='#142e7b')
 	df_sanders.hist(column='contribution_receipt_amount', ax=ax[1], bins=100, rwidth=0.95, color='#4a5410')
 	df_klobuchar.hist(column='contribution_receipt_amount', ax=ax[2], bins=100, rwidth=0.95, color='gray')
 	# Modify axes:
-	upper_donation_limit = 1000 # Upper histogram donation limit in dollars
-	ax[0].set_xlim(-50,upper_donation_limit)
+	donation_amount_limit_x = 1000	# Upper histogram donation amount limit in dollars (y axis)
+	donation_count_limit_y = 20000	# Upper histogram donation count limit (x axis)
+	ax[0].set_xlim(0,donation_amount_limit_x); ax[0].set_ylim(0, donation_count_limit_y)
 	ax[0].set_title('Yang')
 	ax[0].set_xlabel('Donation Amount')
 	ax[0].set_ylabel('Donation Count')
-	ax[1].set_xlim(-50,upper_donation_limit)
+	ax[1].set_xlim(0,donation_amount_limit_x); ax[1].set_ylim(0, donation_count_limit_y)
 	ax[1].set_title('Sanders')
 	ax[1].set_xlabel('Donation Amount')
-	ax[2].set_xlim(-50,upper_donation_limit)
+	ax[2].set_xlim(0,donation_amount_limit_x); ax[2].set_ylim(0, donation_count_limit_y)
 	ax[2].set_title('Klobuchar')
 	ax[2].set_xlabel('Donation Amount')
 	plt.suptitle('Itemized Donations')
@@ -1310,7 +1347,7 @@ FEC()
 
 
 ''' --- Run NationalPolling() --- '''
-# NationalPolling()
+NationalPolling()
 ''' ----------------------------- '''
 
 
