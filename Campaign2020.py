@@ -24,6 +24,8 @@ import re
 import glob
 import os
 
+import psycopg2
+
 sched = BackgroundScheduler()
 
 # Create original dataframe once:
@@ -266,6 +268,10 @@ def FEC():
 	df_contribution_size.replace('CORY 2020','Booker', inplace=True)
 	df_contribution_size.replace('KAMALA HARRIS FOR THE PEOPLE','Harris', inplace=True)
 
+	# Write out all data to csv for use in postgres:
+	df.to_csv('/home/dp/Documents/Campaign/FEC/FEC.csv')
+
+
 	# Processing df:
 	print('df:\n', df)
 	df['contribution_receipt_date'] = pd.to_datetime(df['contribution_receipt_date'])
@@ -492,7 +498,7 @@ def NationalPolling():
 	df = pd.read_csv('/home/dp/Documents/Campaign/NationalPolling.csv', sep=',')
 	print('df:\n', df.to_string())
 	unparsed_dates = df['Date'].values.tolist()
-	parsed_dates = [s[0:s.rindex('- ')].replace('- ','').replace(' ','') for s in unparsed_dates]
+	parsed_dates = [s[0:s.index('- ')].replace('- ','').replace(' ','') for s in unparsed_dates]
 	print('df:\n', df.to_string())
 
 	years = df['Year']
@@ -1078,7 +1084,7 @@ def WebMetrics():
 		print('epo_list:\n', epo_list)
 		# Use epo_list candidate names for csv filename construction for exporting df,
 		# created downstream. epo_list contains repetitions of one name, select the first:
-		csv_filename_base = '/home/dp/Documents/Campaign/Plots/' + 'TwitterMetrics_'
+		csv_filename_base = '/home/dp/Documents/Campaign/TwitterMetrics/' + 'TwitterMetrics_'
 		csv_filename = csv_filename_base + epo_list[0] + '.csv'
 		print('csv_filename:\n', csv_filename)
 
@@ -1168,7 +1174,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 	# df.set_index('Date', inplace=True)
 	# df.sort_index(inplace=True)
 	df.reset_index(inplace=True)
-	#rint('df:\n', df.to_string())
+	# print('df:\n', df.to_string())
 
 	plt.close()
 
@@ -1293,7 +1299,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 	plt.close()
 	label = df_pcnt_growth.index
-	title = col_of_interest
+	title = '% Growth in Twitter Following' #col_of_interest
 	ind = df_pcnt_growth.index
 	fig, ax = plt.subplots(figsize=(6,6))
 	ax = df_all_pcnt_growth.plot.bar(title=title, rot=45)#x=ind, y=col_of_interest, label=label, title=title)
@@ -1312,6 +1318,57 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 		# bet_percentiles = driver.find_elements_by_xpath("//p[@style='font-size: 55pt; margin-bottom:-10px']")
 		# pcnt_list = [float(pcnt.get_attribute('innerHTML').replace('%','')) for pcnt in bet_percentiles]
 
+
+
+def OddsPollsCorrelation(candidate):
+
+	df_dem_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_dem_odds.pkl')
+	df_dem_polls = pd.read_pickle('/home/dp/Documents/Campaign/pickle/NationalPolling_df.pkl')
+	print('df_dem_odds:\n', df_dem_odds.to_string())
+	print('df_dem_polls:\n', df_dem_polls.to_string())
+
+	# Format to Time or Date column to Date, then average each day
+	df_dem_odds.reset_index(inplace=True, drop=True)
+	df_dem_odds['Date'] = df_dem_odds['Time'].dt.date
+	df_dem_odds_day_avg = df_dem_odds.groupby(['Date']).mean()
+	df_dem_odds_day_avg.columns = [col+'_odds' for col in df_dem_odds_day_avg.columns]
+	# print('df_dem_odds_day_avg:\n', df_dem_odds_day_avg)
+	# NOTE: INDEX IS AUTO-SET TO 'DATE' DURING GROUPBY
+
+	df_dem_polls.reset_index(inplace=True)
+	df_dem_polls['Date'] = df_dem_polls['Date'].dt.date
+	df_dem_polls_day_avg = df_dem_polls.groupby(['Date']).mean()
+	df_dem_polls_day_avg.columns = [col+'_polls' for col in df_dem_polls_day_avg.columns]
+	# df_dem_polls_day_avg.set_index('Date', inplace=True)
+	# NOTE: INDEX IS AUTO-SET TO 'DATE' DURING GROUPBY
+
+
+	# print('df_dem_odds_day_avg:\n', df_dem_odds_day_avg.to_string())
+	# print('df_dem_odds_day_avg.columns:\n', df_dem_odds_day_avg.columns)
+	# print('df_dem_odds_day_avg[Biden]:\n', df_dem_odds_day_avg['Biden'])
+	# print('df_dem_polls_day_avg.columns:\n', df_dem_polls_day_avg.columns)
+	# print('df_dem_polls_day_avg[Biden ]:\n', df_dem_polls_day_avg['Biden '])
+
+	# NOTE: THE CONCATENATION ADDS A SPACE TO ANY NAMES THAT ARE DUPLICATES.
+	# BOTH DATAFRAMES HAVE THE SAME NAMES, RESULTING IN THE POLLING NAMES
+	# HAVING A SINGLE SUCCEEDING SPACE
+	candidate_odds = candidate+'_odds'
+	candidate_polls = candidate+'_polls'
+	df_concat_candidate = pd.concat((df_dem_odds_day_avg[candidate_odds],df_dem_polls_day_avg[candidate_polls]), axis=1, ignore_index=False, join='inner')
+	df_concat = pd.concat((df_dem_odds_day_avg, df_dem_polls_day_avg), axis=1, ignore_index=False, join='inner')
+
+	print('df_concat:\n', df_concat.to_string())
+
+	f, ax = plt.subplots(1,1, figsize=(4,4))
+	df_concat.plot.scatter(candidate_odds, candidate_polls, ax=ax, title='Bet Odds vs Polls - '+candidate, color='w', edgecolor='k', marker='^')
+	ax.set_xlabel('Betting odds, %')
+	ax.set_ylabel('Polling, %')
+	plt.show()
+
+	candidate_corr = df_concat[candidate_odds].corr(df_concat[candidate_polls])
+	print('Correlation for '+candidate+':\n', candidate_corr)
+	print('df_concat_candidate:\n', df_concat_candidate)
+	return
 
 
 
@@ -1342,12 +1399,12 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 # sched.shutdown()
 
 ''' --- Federal Election Commission --- '''
-FEC()
+# FEC()
 ''' ----------------------------------- '''
 
 
 ''' --- Run NationalPolling() --- '''
-NationalPolling()
+# NationalPolling()
 ''' ----------------------------- '''
 
 
@@ -1362,11 +1419,18 @@ NationalPolling()
 
 
 ''' --- Run CampaignBetting() --- '''
-CampaignBetting()
-PlotCampaignBetting()
+# CampaignBetting()
+# PlotCampaignBetting()
 # --- Sorting Campaign ---
+# Only run if there's an issue
+# with betting odds getting
+# matched to the wrong candidates:
 # SortCampaignBettingCSV()
 ''' --------------------------- '''
+
+''' --- Run OddsPollsCorrelation() --- '''
+OddsPollsCorrelation('Yang')
+''' ---------------------------------- '''
 
 
 ''' ----------------------------------------- WebMetrics() ----------------------------------------- '''
@@ -1376,7 +1440,7 @@ PlotCampaignBetting()
 						# THE LATEST 30 DAYS OF TWITTER DATA. CURRENT CSV FILES ARE BACKED UP IN THE
 						# FOLDER 'Campaign/TwitterMetrics csv backup'. WebMetrics() NEEDS THE CAPABILITY
 						# TO LOAD CSV DATA, ADD THE MOST RECENT SCRAPED DATA TO IT AND WRITE BACK TO CSV.
-# PlotWebMetrics(['2019,3,15','2019,3,22','2019,3,29','2019,4,5'],['2019,3,22','2019,3,29','2019,4,5','2019,4,14'])
+# PlotWebMetrics(['2019,4,1','2019,4,8','2019,4,15','2019,4,22','2019,4,29','2019,5,5'],['2019,4,8','2019,4,15','2019,4,22','2019,4,29','2019,5,5','2019,5,14'])
 ''' ----------------------------- '''
 
 
