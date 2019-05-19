@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 from pandas.plotting import register_matplotlib_converters
+import seaborn as sns
 register_matplotlib_converters()
 
 import matplotlib.pyplot as plt
@@ -180,6 +181,7 @@ def DonorCounter():
 	plt.title('200k donors projected date: {0} or {1}'.format(projected_date_200k_7_days, projected_date_200k_30_days))
 	plt.savefig('DonorCountYang.png', bbox_inches='tight')
 	plt.show()
+
 	# ''' --------------- '''
 
 	# ''' try-except isn't necessary unless webpage won't load '''
@@ -1327,21 +1329,23 @@ def OddsPollsCorrelation(candidate):
 	print('df_dem_odds:\n', df_dem_odds.to_string())
 	print('df_dem_polls:\n', df_dem_polls.to_string())
 
-	# Format to Time or Date column to Date, then average each day
+	# Format Odds index (Time or Date) to Date, then average each day. Typically
+	# I make multiple reads of the betting data per day.
 	df_dem_odds.reset_index(inplace=True, drop=True)
 	df_dem_odds['Date'] = df_dem_odds['Time'].dt.date
 	df_dem_odds_day_avg = df_dem_odds.groupby(['Date']).mean()
-	df_dem_odds_day_avg.columns = [col+'_odds' for col in df_dem_odds_day_avg.columns]
+	# df_dem_odds_day_avg.columns = [col+'_odds' for col in df_dem_odds_day_avg.columns]
 	# print('df_dem_odds_day_avg:\n', df_dem_odds_day_avg)
 	# NOTE: INDEX IS AUTO-SET TO 'DATE' DURING GROUPBY
 
+	# Format Polls index (Time or Date) to Date, then average each day. Sometimes
+	# there may be two polls released in one day.
 	df_dem_polls.reset_index(inplace=True)
 	df_dem_polls['Date'] = df_dem_polls['Date'].dt.date
 	df_dem_polls_day_avg = df_dem_polls.groupby(['Date']).mean()
-	df_dem_polls_day_avg.columns = [col+'_polls' for col in df_dem_polls_day_avg.columns]
+	# df_dem_polls_day_avg.columns = [col+'_polls' for col in df_dem_polls_day_avg.columns]
 	# df_dem_polls_day_avg.set_index('Date', inplace=True)
 	# NOTE: INDEX IS AUTO-SET TO 'DATE' DURING GROUPBY
-
 
 	# print('df_dem_odds_day_avg:\n', df_dem_odds_day_avg.to_string())
 	# print('df_dem_odds_day_avg.columns:\n', df_dem_odds_day_avg.columns)
@@ -1352,22 +1356,101 @@ def OddsPollsCorrelation(candidate):
 	# NOTE: THE CONCATENATION ADDS A SPACE TO ANY NAMES THAT ARE DUPLICATES.
 	# BOTH DATAFRAMES HAVE THE SAME NAMES, RESULTING IN THE POLLING NAMES
 	# HAVING A SINGLE SUCCEEDING SPACE
-	candidate_odds = candidate+'_odds'
-	candidate_polls = candidate+'_polls'
-	df_concat_candidate = pd.concat((df_dem_odds_day_avg[candidate_odds],df_dem_polls_day_avg[candidate_polls]), axis=1, ignore_index=False, join='inner')
-	df_concat = pd.concat((df_dem_odds_day_avg, df_dem_polls_day_avg), axis=1, ignore_index=False, join='inner')
+	# candidate_odds = candidate+'_odds'
+	# candidate_polls = candidate+'_polls'
+	# df_concat_candidate = pd.concat((df_dem_odds_day_avg[candidate_odds],df_dem_polls_day_avg[candidate_polls]), axis=1, ignore_index=False, join='inner')
+	# df_concat = pd.concat((df_dem_odds_day_avg, df_dem_polls_day_avg), axis=1, ignore_index=False, join='inner')
 
-	print('df_concat:\n', df_concat.to_string())
+	# print('df_concat:\n', df_concat.to_string())
 
-	f, ax = plt.subplots(1,1, figsize=(4,4))
-	df_concat.plot.scatter(candidate_odds, candidate_polls, ax=ax, title='Bet Odds vs Polls - '+candidate, color='w', edgecolor='k', marker='^')
-	ax.set_xlabel('Betting odds, %')
-	ax.set_ylabel('Polling, %')
+	# ---------------------------------------------------------------------------------------
+	# Currently df_dem_odds_day_avg and df_dem_polls_day_avg are formatted with candidates
+	# as columns:
+	# Date         Biden  Booker
+	# 2019-03-25   19.6   2.0
+	# 2019-04-01   12.1   2.1
+	# 
+	#
+	# Reformat the odds and polls dataframes with candidates in one column (e.g. tidy format):
+	# Candidate   Date         Odds  Polls
+	# Biden       2019-03-25   19.6  20
+	#			  2019-04-01   11.1  32
+	# 
+	# The reformat is accomplished by stack(), resetting the index (not sure why I need to name it 'Odds'),
+	# then renaming the new column to 'Candidate' containing candidate names that were previously columns
+	# Set the index to candidate and date, then sort the index.
+
+	df_dem_odds_day_avg_stack = df_dem_odds_day_avg.stack().reset_index(name='Odds').rename(columns={'level_1':'Candidate'})
+	df_dem_odds_day_avg_stack.set_index(['Candidate','Date'], inplace=True)
+	df_dem_odds_day_avg_stack.sort_index(level=0, inplace=True)
+	print('df_dem_odds_day_avg_stack:\n', df_dem_odds_day_avg_stack)
+
+	df_dem_polls_day_avg_stack = df_dem_polls_day_avg.stack().reset_index(name='Polls').rename(columns={'level_1':'Candidate'})
+	df_dem_polls_day_avg_stack.set_index(['Candidate','Date'], inplace=True)
+	df_dem_polls_day_avg_stack.sort_index(level=0, inplace=True)
+	print('df_dem_polls_day_avg_stack:\n', df_dem_polls_day_avg_stack)
+
+	# NOTE: THE RESULT OF THIS CONCATENATION LOOKS LIKE A MESS. NOT SURE WHY, BUT SORTING THE INDEX FIXES THE PROBLEM.
+	# THE NON-CONCATENATION AXIS (ROWS) ARE NOT ALIGNED, AND THEREFORE NEED TO BE SORTED, DO SO BY SPECIFYING sort=True:
+	df_odds_polls = pd.concat((df_dem_odds_day_avg_stack, df_dem_polls_day_avg_stack), axis=1, ignore_index=False, join='inner', sort=True)
+	df_odds_polls['OddsPollsRatio'] = df_odds_polls['Odds']/df_odds_polls['Polls']
+	df_odds_polls.replace(np.inf, np.nan, inplace=True) # Odds/Polls = 4.15/0.00 = inf. Replacing all inf.
+	print('df_odds_polls:\n', df_odds_polls)
+
+	candidate_list = df_odds_polls.index.get_level_values(0).unique().tolist()
+	corr_list = []
+	# Iterate through the candidate index and calculate the Odds-Polls correlation:
+	for candidate in candidate_list:
+		corr = df_odds_polls.loc[candidate]['Odds'].corr(df_odds_polls.loc[candidate]['Polls'])
+		corr_list.append(corr)
+	candidate_corr_list = [(x,y) for x,y in zip(candidate_list, corr_list)]
+	df_candidate_corrs = pd.DataFrame(data=candidate_corr_list, columns=['Candidate', 'Correlation'])
+	df_candidate_corrs.set_index('Candidate', drop=True, inplace=True)
+	print('df_candidate_corrs:\n', df_candidate_corrs)
+	# ---------------------------------------------------------------------------------------
+
+	# Markers list for plots
+	markers = ['o','s','D','v','^','<','>','+','d', '.','s','D','v','^','<','>','+','d','x'] # Unique markers for each candidate
+	num_candidates = len(candidate_list)
+	markers = markers[0:num_candidates]
+	# ---------------------------------------------------------------------------------------
+	# Bar plot of Correlation vs Candidate:
+	f, ax = plt.subplots(figsize=(6,4))
+	plt.gcf()
+	df_candidate_corrs.plot.bar(y='Correlation', ax=ax, title='Candidate Odds-Polls Correlation', legend=False, color='gray')
+	ax.set_xlabel('Candidate')
+	ax.set_ylabel('Correlation, %')
+	# plt.title('Odds-Polls Correlation')
+	plt.savefig('Odds_Polls_Correlation.png', bbox_inches='tight')
+	plt.show()
+	# ---------------------------------------------------------------------------------------
+	# Scatter of Odds vs Polls:
+	df_odds_polls.reset_index(inplace=True) # Resetting index to make 'Candidate' available for 'hue' in sns pairplot
+
+	p = sns.pairplot(x_vars='Polls', y_vars='Odds', data=df_odds_polls, hue='Candidate', height=5, markers=markers)
+	p.set(xlim=(0,45))
+	p.set(ylim=(0,45))
+	# p.set(title='Betting Odds vs Polls')
+	plt.savefig('Odds_vs_Polls.png', bbox_inches='tight')
+	plt.show()
+	# ---------------------------------------------------------------------------------------
+	# Boxplot of odd:polls ratio for each candidate.
+	# Averaging each candidates Odds and Polls data to create a ratio.
+	df_odds_polls_ratio_sorted_avg = df_odds_polls[['Candidate','OddsPollsRatio']].groupby('Candidate').mean()
+	df_odds_polls_ratio_sorted_avg.rename(columns={'OddsPollsRatio':'OddsPollsRatioAvg'}, inplace=True)
+	df_odds_polls_ratio_sorted_avg.sort_index(by='OddsPollsRatioAvg', ascending=True, inplace=True)
+	print('df_odds_polls_ratio_sorted_avg:\n', df_odds_polls_ratio_sorted_avg)
+	order = df_odds_polls_ratio_sorted_avg.index.values.tolist()
+	
+	p = sns.boxplot(x='Candidate', y='OddsPollsRatio', order=order, data=df_odds_polls)
+	p.set(ylabel='Betting Odds:National Polls')
+	p.set_xticklabels(p.get_xticklabels(),rotation=30)
+	# p.set(title='2020 Democratic Primary: Betting Odds - to - National Polls Ratio')
+	plt.annotate('Time period: March 25 - May 18, 2019\nBetting odds: electionbettingodds.com\nPolls: realclearpolitics.com', xy=(-0.15,4.7))
+	plt.savefig('Odds_to_Polls_Ratio.png', bbox_inches='tight')
 	plt.show()
 
-	candidate_corr = df_concat[candidate_odds].corr(df_concat[candidate_polls])
-	print('Correlation for '+candidate+':\n', candidate_corr)
-	print('df_concat_candidate:\n', df_concat_candidate)
+
 	return
 
 
@@ -1385,9 +1468,8 @@ def OddsPollsCorrelation(candidate):
 
 
 ''' --- Run DonorCounter() --- '''
-# DonorCounter()
+DonorCounter()
 ''' -------------------------- '''
-
 
 ''' --- Scheduling the DonorCounter() data collection: --- '''
 ''' --- Uncomment to schedule DonorCounter(), specify time --- '''
@@ -1419,8 +1501,8 @@ def OddsPollsCorrelation(candidate):
 
 
 ''' --- Run CampaignBetting() --- '''
-# CampaignBetting()
-# PlotCampaignBetting()
+CampaignBetting()
+PlotCampaignBetting()
 # --- Sorting Campaign ---
 # Only run if there's an issue
 # with betting odds getting
@@ -1429,7 +1511,7 @@ def OddsPollsCorrelation(candidate):
 ''' --------------------------- '''
 
 ''' --- Run OddsPollsCorrelation() --- '''
-OddsPollsCorrelation('Yang')
+OddsPollsCorrelation('ORourke')
 ''' ---------------------------------- '''
 
 
