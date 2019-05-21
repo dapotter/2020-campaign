@@ -29,8 +29,178 @@ import psycopg2
 
 sched = BackgroundScheduler()
 
+# # Create original dataframe once:
+# def YangDonorCounter():
+# 	#global df
+
+# 	driver = webdriver.Chrome('/usr/bin/chromedriver')
+# 	# This doesn't allow the donor count to update: driver.minimize_window()
+# 	driver.set_window_size(0, 0)
+# 	driver.set_window_position(0,0)
+# 	#driver = webdriver.Chrome('/home/dp/Downloads/')  # Optional argument, if not specified will search path.
+# 	url = 'https://www.yang2020.com/'
+# 	driver.get(url)
+# 	time.sleep(3) # Allow the user see website load
+# 	donor_count_str = driver.find_element_by_class_name('donor-count-number').text
+# 	donor_goal_str = driver.find_element_by_css_selector('.total.goal').text
+# 	donor_count = int(float(donor_count_str.replace(',','')))
+# 	donor_goal = int(float(donor_goal_str.replace(',','')))
+# 	donor_pcnt = (donor_count / donor_goal)*100
+# 	current_time = datetime.datetime.now()
+
+# 	print('donor_count:', donor_count)
+# 	print('donor_goal:', donor_goal)
+# 	print('donor_pcnt:', donor_pcnt)
+# 	print('current_time:', current_time)
+
+# 	donor_arr = [current_time, donor_count, donor_goal, donor_pcnt]
+
+# 	fields=['Time','Count','Goal', 'Pcnt']
+# 	donor_dict = {'Time':current_time,'Count':donor_count,'Goal':donor_goal, 'Pcnt':donor_pcnt}
+# 	print('donor_dict:\n', donor_dict)
+
+# 	#df = df.append(donor_dict, ignore_index=True)
+
+# 	''' Creates csv, overwrites the current one of the same name: '''
+# 	# with open('DonorCountYang.csv','w') as f:
+# 	#     writer = csv.DictWriter(f, fieldnames=fields)
+# 	#     writer.writerow(donor_dict)
+
+# 	''' Appends the csv '''
+# 	with open(r'DonorCountYang.csv', 'a', newline='') as f:
+# 	    writer = csv.DictWriter(f, fieldnames=fields)
+# 	    writer.writerow(donor_dict)
+
+# 	# Close driver:
+# 	driver.quit()
+
+# 	# Read csv into dataframe:
+# 	df = pd.read_csv('DonorCountYang.csv')
+# 	print('df head:\n', df.head)
+# 	# Format Time column
+# 	df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d %H:%M:%S')
+# 	# Check formatting:
+# 	#print('time type:\n', type(df.iloc[0]['Time']))
+
+# 	# Calculate donor growth rate:
+# 	x = mdates.date2num(df.Time.values) # Time values converted to floats
+# 	print('Time values converted to numbers:\n', x)
+# 	y = df['Count'].values # Counts
+# 	growth_rate = np.gradient(y,x)
+# 	df['Rate'] = growth_rate
+
+# 	print('Donor Count df:\n', df.to_string())
+
+# 	# Pickle out:
+# 	DonorCountYang_df_pkl = df.to_pickle('/home/dp/Documents/Campaign/pickle/DonorCountYang_df.pkl')
+
+# 	# ''' Make projection for 200,000 donors '''
+# 	# Data from Time and Count column for 7 days prior to the current date
+# 	# Fit line to Count vs Time data.
+# 	# Plug 200,000 into y-value, solve for x (date)
+# 	# Put date value into plot: 'Projected 200,000 donors'
+
+# 	current_time = datetime.datetime.now()
+# 	print('current time:', current_time)
+# 	one_wk_timedelta = datetime.timedelta(days=7)
+# 	one_mnth_timedelta = datetime.timedelta(days=30)
+# 	print('one_wk_timedelta:', one_wk_timedelta)
+# 	one_wk_prior_time = current_time - one_wk_timedelta
+# 	one_mnth_prior_time = current_time - one_mnth_timedelta
+# 	print('one_wk_prior_time:', one_wk_prior_time)
+	
+	
+# 	df['Time'] = pd.to_datetime(df['Time'])
+# 	df.set_index('Time', inplace=True)
+# 	df_7_days = df.loc[one_wk_prior_time:current_time]
+# 	df_30_days = df.loc[one_mnth_prior_time:current_time]
+# 	print('df_7_days:\n', df_7_days)
+
+# 	# mask = (df['Time'] >= one_wk_prior_time) & (df['Time'] <= current_time)
+# 	# df_7_days = df.loc[mask]
+# 	# print('df_7_days:\n', df_7_days)
+# 	dates_float_7_days = mdates.date2num(df_7_days.index)
+# 	dates_float_30_days = mdates.date2num(df_30_days.index)
+# 	print('dates_float:\n', dates_float_7_days)
+
+# 	count_7_days = df_7_days.loc[:,'Count']
+# 	count_30_days = df_30_days.loc[:,'Count']
+# 	print('df_7_days.loc[:,"Count"]:\n', df_7_days.loc[:,'Count'])
+
+# 	pfit_7_days = np.polyfit(x=dates_float_7_days, y=count_7_days, deg=1)
+# 	linfit_7_days = np.poly1d(pfit_7_days)
+# 	pfit_30_days = np.polyfit(x=dates_float_30_days, y=count_30_days, deg=1)
+# 	linfit_30_days = np.poly1d(pfit_30_days)
+
+# 	#df.reset_index(inplace=True)
+# 	df_7_days['Trendline 1 Week'] = linfit_7_days(dates_float_7_days)
+# 	df_30_days['Trendline 1 Month'] = linfit_30_days(dates_float_30_days)
+# 	print('df_7_days with Trendline:\n', df_7_days)
+
+# 	# 200k donor prediction date:
+# 	start_date = current_time
+# 	# date_step = datetime.timedelta(days=7)
+# 	projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,800))]
+# 	projected_dates_float = mdates.date2num(projected_dates)
+# 	projected_donor_count_7_days = linfit_7_days(projected_dates_float)
+# 	projected_donor_count_30_days = linfit_30_days(projected_dates_float)
+
+# 	# print('projected_dates:', projected_dates)
+# 	# print('projected_donor_count:\n', projected_donor_count)
+# 	print('shape projected_donor_count_7_days:\n', np.shape(projected_donor_count_7_days))
+# 	projected_datetime_200k_7_days = projected_dates[np.flatnonzero(projected_donor_count_7_days > 200000)[0]] # np.where also works but returns a 1-element tuple
+# 	# SOMETIMES THE CODE ERRORS HERE. THIS IS THE RESULT OF THE PROJECTION NEVER REACHING 200,000
+# 	# DONORS BECAUSE THE RATE OF GROWTH IS TOO LOW. TO FIX: IN list(range(1,X)) ABOVE, MAKE X
+# 	# BIGGER UNTIL ERROR GOES AWAY. X IS THE NUMBER OF TIMESTEPS INTO THE FUTURE TO PROJECT.
+# 	projected_date_200k_7_days = projected_datetime_200k_7_days.strftime('%b %d, %Y')
+# 	print('projected_date_200k_7_days:', projected_date_200k_7_days)
+# 	projected_datetime_200k_30_days = projected_dates[np.flatnonzero(projected_donor_count_30_days > 200000)[0]] # np.where also works but returns a 1-element tuple
+# 	projected_date_200k_30_days = projected_datetime_200k_30_days.strftime('%b %d, %Y')
+
+# 	# ''' Plotting data: '''
+# 	#fig = plt.figure()
+# 	w = 3
+# 	h = 3
+# 	#fig = plt.figure(frameon=False)
+# 	#fig.set_size_inches(w,h)
+# 	f, ax1 = plt.subplots(figsize=(8,8))
+# 	ax2 = ax1.twinx()
+# 	ax1.plot(df.index, df['Count'], linewidth=1, color='k', marker='o', markersize=3, markerfacecolor='none', markeredgecolor='k')
+# 	ax1.plot(df_7_days.index, df_7_days['Trendline 1 Week'], color='r')
+# 	ax1.plot(df_30_days.index, df_30_days['Trendline 1 Month'], color='#b2b74e')
+# 	ax2.plot(df.index, df['Rate'], linewidth=1, color='#4b7a46', marker='^', markersize=3, markerfacecolor='none', markeredgecolor='#4b7a46')
+# 	ax1.set_xlabel('DateTime', color='k')
+# 	ax1.set_ylabel('Number of donors', color='k')
+# 	ax1.tick_params('y', colors='k')
+# 	ax1.legend(labels=['Donor count','7-day trend','30-day trend'])
+# 	ax2.set_ylabel('Donors/Day', color='#4b7a46')
+# 	ax2.tick_params('y', colors='#4b7a46')
+# 	ax2.legend(labels=['Donor growth'])
+# 	f.autofmt_xdate()
+# 	plt.title('200k donors projected date: {0} or {1}'.format(projected_date_200k_7_days, projected_date_200k_30_days))
+# 	plt.savefig('DonorCountYang.png', bbox_inches='tight')
+# 	plt.show()
+
+# 	# ''' --------------- '''
+
+# 	# ''' try-except isn't necessary unless webpage won't load '''
+# 	#
+# 	# try:
+# 	# 	element_present = EC.presence_of_element_located((By.CLASS_NAME, 'donor-count-number'))
+# 	# 	WebDriverWait(driver, timeout).until(element_present)
+# 	# 	donor_count_3 = driver.find_element_by_class_name('donor-count-number')
+# 	# 	print('donor_count_3:\n', donor_count_3.text)
+# 	# except TimeoutException:
+# 	# 	print("Timed out waiting for page to load")
+
+# 	return
+
+
+''' ----------------------------------------------------------------------------------------------- '''
+
+
 # Create original dataframe once:
-def DonorCounter():
+def YangDollarCounter():
 	#global df
 
 	driver = webdriver.Chrome('/usr/bin/chromedriver')
@@ -40,11 +210,18 @@ def DonorCounter():
 	#driver = webdriver.Chrome('/home/dp/Downloads/')  # Optional argument, if not specified will search path.
 	url = 'https://www.yang2020.com/'
 	driver.get(url)
-	time.sleep(3) # Allow the user see website load
+	time.sleep(10) # Allow the user see website load
+	
 	donor_count_str = driver.find_element_by_class_name('donor-count-number').text
+	donor_count_str = donor_count_str.replace('$','') # Remove $ symbol
+	donor_count_str = donor_count_str.replace(',','') # Remove ,
+	donor_count = int(float(donor_count_str))
+	
 	donor_goal_str = driver.find_element_by_css_selector('.total.goal').text
-	donor_count = int(float(donor_count_str.replace(',','')))
-	donor_goal = int(float(donor_goal_str.replace(',','')))
+	donor_goal_str = donor_goal_str.replace('$','') # Remove $ symbol
+	donor_goal_str = donor_goal_str.replace(',','') # Remove $ symbol
+	donor_goal = int(float(donor_goal_str))
+	
 	donor_pcnt = (donor_count / donor_goal)*100
 	current_time = datetime.datetime.now()
 
@@ -59,15 +236,15 @@ def DonorCounter():
 	donor_dict = {'Time':current_time,'Count':donor_count,'Goal':donor_goal, 'Pcnt':donor_pcnt}
 	print('donor_dict:\n', donor_dict)
 
-	#df = df.append(donor_dict, ignore_index=True)
 
 	''' Creates csv, overwrites the current one of the same name: '''
-	# with open('DonorCountYang.csv','w') as f:
+	# df = df.append(donor_dict, ignore_index=True) # This does nothing
+	# with open('DollarCountYang.csv','w') as f:
 	#     writer = csv.DictWriter(f, fieldnames=fields)
 	#     writer.writerow(donor_dict)
 
 	''' Appends the csv '''
-	with open(r'DonorCountYang.csv', 'a', newline='') as f:
+	with open(r'DollarCountYang.csv', 'a', newline='') as f:
 	    writer = csv.DictWriter(f, fieldnames=fields)
 	    writer.writerow(donor_dict)
 
@@ -75,7 +252,7 @@ def DonorCounter():
 	driver.quit()
 
 	# Read csv into dataframe:
-	df = pd.read_csv('DonorCountYang.csv')
+	df = pd.read_csv('DollarCountYang.csv')
 	print('df head:\n', df.head)
 	# Format Time column
 	df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d %H:%M:%S')
@@ -89,10 +266,10 @@ def DonorCounter():
 	growth_rate = np.gradient(y,x)
 	df['Rate'] = growth_rate
 
-	print('Donor Count df:\n', df.to_string())
+	print('Dollar Count df:\n', df.to_string())
 
 	# Pickle out:
-	DonorCountYang_df_pkl = df.to_pickle('/home/dp/Documents/Campaign/pickle/DonorCountYang_df.pkl')
+	df.to_pickle('/home/dp/Documents/Campaign/pickle/DollarCountYang_df.pkl')
 
 	# ''' Make projection for 200,000 donors '''
 	# Data from Time and Count column for 7 days prior to the current date
@@ -137,26 +314,27 @@ def DonorCounter():
 	df_30_days['Trendline 1 Month'] = linfit_30_days(dates_float_30_days)
 	print('df_7_days with Trendline:\n', df_7_days)
 
+	# -----------------------------------------------------------------------------------------------
+	# # $3.5 MILLION DONATION LINEAR PROJECTIONS. UNCOMMENT TO USE:
+	# start_date = current_time
+	# # date_step = datetime.timedelta(days=7)
+	# projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,800))]
+	# projected_dates_float = mdates.date2num(projected_dates)
+	# projected_donor_count_7_days = linfit_7_days(projected_dates_float)
+	# projected_donor_count_30_days = linfit_30_days(projected_dates_float)
 
-	# 200k donor prediction date:
-	start_date = current_time
-	# date_step = datetime.timedelta(days=7)
-	projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,800))]
-	projected_dates_float = mdates.date2num(projected_dates)
-	projected_donor_count_7_days = linfit_7_days(projected_dates_float)
-	projected_donor_count_30_days = linfit_30_days(projected_dates_float)
-
-	# print('projected_dates:', projected_dates)
-	# print('projected_donor_count:\n', projected_donor_count)
-	print('shape projected_donor_count_7_days:\n', np.shape(projected_donor_count_7_days))
-	projected_datetime_200k_7_days = projected_dates[np.flatnonzero(projected_donor_count_7_days > 200000)[0]] # np.where also works but returns a 1-element tuple
-	# SOMETIMES THE CODE ERRORS HERE. THIS IS THE RESULT OF THE PROJECTION NEVER REACHING 200,000
-	# DONORS BECAUSE THE RATE OF GROWTH IS TOO LOW. TO FIX: IN list(range(1,X)) ABOVE, MAKE X
-	# BIGGER UNTIL ERROR GOES AWAY. X IS THE NUMBER OF TIMESTEPS INTO THE FUTURE TO PROJECT.
-	projected_date_200k_7_days = projected_datetime_200k_7_days.strftime('%b %d, %Y')
-	print('projected_date_200k_7_days:', projected_date_200k_7_days)
-	projected_datetime_200k_30_days = projected_dates[np.flatnonzero(projected_donor_count_30_days > 200000)[0]] # np.where also works but returns a 1-element tuple
-	projected_date_200k_30_days = projected_datetime_200k_30_days.strftime('%b %d, %Y')
+	# # print('projected_dates:', projected_dates)
+	# # print('projected_donor_count:\n', projected_donor_count)
+	# print('shape projected_donor_count_7_days:\n', np.shape(projected_donor_count_7_days))
+	# projected_datetime_3_5Mil_7_days = projected_dates[np.flatnonzero(projected_donor_count_7_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
+	# # SOMETIMES THE CODE ERRORS HERE. THIS IS THE RESULT OF THE PROJECTION NEVER REACHING $3.5
+	# # MILLION BECAUSE THE RATE OF GROWTH IS TOO LOW. TO FIX: IN list(range(1,X)) ABOVE, MAKE X
+	# # BIGGER UNTIL ERROR GOES AWAY. X IS THE NUMBER OF TIMESTEPS INTO THE FUTURE TO PROJECT.
+	# projected_date_3_5Mil_7_days = projected_datetime_3_5Mil_7_days.strftime('%b %d, %Y')
+	# print('projected_date_3_5Mil_7_days:', projected_date_3_5Mil_7_days)
+	# projected_datetime_3_5Mil_30_days = projected_dates[np.flatnonzero(projected_donor_count_30_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
+	# projected_date_3_5Mil_30_days = projected_datetime_3_5Mil_30_days.strftime('%b %d, %Y')
+	# -----------------------------------------------------------------------------------------------
 
 	# ''' Plotting data: '''
 	#fig = plt.figure()
@@ -167,19 +345,20 @@ def DonorCounter():
 	f, ax1 = plt.subplots(figsize=(8,8))
 	ax2 = ax1.twinx()
 	ax1.plot(df.index, df['Count'], linewidth=1, color='k', marker='o', markersize=3, markerfacecolor='none', markeredgecolor='k')
-	ax1.plot(df_7_days.index, df_7_days['Trendline 1 Week'], color='r')
-	ax1.plot(df_30_days.index, df_30_days['Trendline 1 Month'], color='#b2b74e')
+	# ax1.plot(df_7_days.index, df_7_days['Trendline 1 Week'], color='r')
+	# ax1.plot(df_30_days.index, df_30_days['Trendline 1 Month'], color='#b2b74e')
 	ax2.plot(df.index, df['Rate'], linewidth=1, color='#4b7a46', marker='^', markersize=3, markerfacecolor='none', markeredgecolor='#4b7a46')
 	ax1.set_xlabel('DateTime', color='k')
-	ax1.set_ylabel('Number of donors', color='k')
+	ax1.set_ylabel('Total dollars', color='k')
 	ax1.tick_params('y', colors='k')
-	ax1.legend(labels=['Donor count','7-day trend','30-day trend'])
-	ax2.set_ylabel('Donors/Day', color='#4b7a46')
+	# ax1.legend(labels=['Dollar count','7-day trend','30-day trend'])
+	ax2.set_ylabel('Dollars/Day', color='#4b7a46')
 	ax2.tick_params('y', colors='#4b7a46')
-	ax2.legend(labels=['Donor growth'])
+	ax2.legend(labels=['Dollar growth'])
 	f.autofmt_xdate()
-	plt.title('200k donors projected date: {0} or {1}'.format(projected_date_200k_7_days, projected_date_200k_30_days))
-	plt.savefig('DonorCountYang.png', bbox_inches='tight')
+	# plt.title('$3.5 million projected date: {0} or {1}'.format(projected_date_3_5Mil_7_days, projected_date_3_5Mil_30_days))
+	plt.title('Dollars Raised')
+	plt.savefig('DollarCountYang.png', bbox_inches='tight')
 	plt.show()
 
 	# ''' --------------- '''
@@ -1456,7 +1635,7 @@ def OddsPollsCorrelation(candidate):
 
 
 
-''' ----------------------------------------- DonorCounter() ----------------------------------------- '''
+''' ----------------------------------------- Campaign 2020 ----------------------------------------- '''
 
 # ''' Initialize donor dict and dataframe. Only do once. '''
 # donor_dict = {	'time':[],
@@ -1467,12 +1646,20 @@ def OddsPollsCorrelation(candidate):
 # ''' -------------------------------------------------- '''
 
 
-''' --- Run DonorCounter() --- '''
-DonorCounter()
+''' --- Run YangDonorCounter() --- '''
+# WARNING: THE DONOR COUNTER HAS BEEN REPLACED BY A DOLLARCOUNTER.
+# RUN YangDollarCounter() INSTEAD.
+# YangDonorCounter()
 ''' -------------------------- '''
 
-''' --- Scheduling the DonorCounter() data collection: --- '''
-''' --- Uncomment to schedule DonorCounter(), specify time --- '''
+''' --- Run YangDollarCounter() --- '''
+YangDollarCounter()
+''' --------------------------- '''
+
+
+
+''' --- Scheduling the YangDonorCounter() data collection: --- '''
+''' --- Uncomment to schedule YangDonorCounter(), specify time --- '''
 # Seconds can be replaced with minutes, hours, or days
 # sched.start()
 # sched.add_job(DonorCounter, 'interval', seconds=3)
