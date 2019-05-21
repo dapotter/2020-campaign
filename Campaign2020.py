@@ -200,7 +200,7 @@ sched = BackgroundScheduler()
 
 
 # Create original dataframe once:
-def YangDollarCounter():
+def YangMoneyRaised():
 	#global df
 
 	driver = webdriver.Chrome('/usr/bin/chromedriver')
@@ -212,47 +212,47 @@ def YangDollarCounter():
 	driver.get(url)
 	time.sleep(10) # Allow the user see website load
 	
-	donor_count_str = driver.find_element_by_class_name('donor-count-number').text
-	donor_count_str = donor_count_str.replace('$','') # Remove $ symbol
-	donor_count_str = donor_count_str.replace(',','') # Remove ,
-	donor_count = int(float(donor_count_str))
+	money_count_str = driver.find_element_by_class_name('donor-count-number').text
+	money_count_str = money_count_str.replace('$','') # Remove $ symbol
+	money_count_str = money_count_str.replace(',','') # Remove ,
+	money_count = int(float(money_count_str))
 	
-	donor_goal_str = driver.find_element_by_css_selector('.total.goal').text
-	donor_goal_str = donor_goal_str.replace('$','') # Remove $ symbol
-	donor_goal_str = donor_goal_str.replace(',','') # Remove $ symbol
-	donor_goal = int(float(donor_goal_str))
+	money_goal_str = driver.find_element_by_css_selector('.total.goal').text
+	money_goal_str = money_goal_str.replace('$','') # Remove $ symbol
+	money_goal_str = money_goal_str.replace(',','') # Remove $ symbol
+	money_goal = int(float(money_goal_str))
 	
-	donor_pcnt = (donor_count / donor_goal)*100
+	money_pcnt = (money_count / money_goal)*100
 	current_time = datetime.datetime.now()
 
-	print('donor_count:', donor_count)
-	print('donor_goal:', donor_goal)
-	print('donor_pcnt:', donor_pcnt)
+	print('money_count:', money_count)
+	print('money_goal:', money_goal)
+	print('money_pcnt:', money_pcnt)
 	print('current_time:', current_time)
 
-	donor_arr = [current_time, donor_count, donor_goal, donor_pcnt]
+	money_arr = [current_time, money_count, money_goal, money_pcnt]
 
 	fields=['Time','Count','Goal', 'Pcnt']
-	donor_dict = {'Time':current_time,'Count':donor_count,'Goal':donor_goal, 'Pcnt':donor_pcnt}
-	print('donor_dict:\n', donor_dict)
+	money_dict = {'Time':current_time,'Count':money_count,'Goal':money_goal, 'Pcnt':money_pcnt}
+	print('money_dict:\n', money_dict)
 
 
 	''' Creates csv, overwrites the current one of the same name: '''
-	# df = df.append(donor_dict, ignore_index=True) # This does nothing
-	# with open('DollarCountYang.csv','w') as f:
+	# df = df.append(money_dict, ignore_index=True) # This does nothing
+	# with open('MoneyRaisedYang.csv','w') as f:
 	#     writer = csv.DictWriter(f, fieldnames=fields)
-	#     writer.writerow(donor_dict)
+	#     writer.writerow(money_dict)
 
 	''' Appends the csv '''
-	with open(r'DollarCountYang.csv', 'a', newline='') as f:
+	with open(r'MoneyRaisedYang.csv', 'a', newline='') as f:
 	    writer = csv.DictWriter(f, fieldnames=fields)
-	    writer.writerow(donor_dict)
+	    writer.writerow(money_dict)
 
 	# Close driver:
 	driver.quit()
 
 	# Read csv into dataframe:
-	df = pd.read_csv('DollarCountYang.csv')
+	df = pd.read_csv('MoneyRaisedYang.csv')
 	print('df head:\n', df.head)
 	# Format Time column
 	df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d %H:%M:%S')
@@ -269,7 +269,7 @@ def YangDollarCounter():
 	print('Dollar Count df:\n', df.to_string())
 
 	# Pickle out:
-	df.to_pickle('/home/dp/Documents/Campaign/pickle/DollarCountYang_df.pkl')
+	df.to_pickle('/home/dp/Documents/Campaign/pickle/MoneyRaisedYang_df.pkl')
 
 	# ''' Make projection for 200,000 donors '''
 	# Data from Time and Count column for 7 days prior to the current date
@@ -320,19 +320,19 @@ def YangDollarCounter():
 	# # date_step = datetime.timedelta(days=7)
 	# projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,800))]
 	# projected_dates_float = mdates.date2num(projected_dates)
-	# projected_donor_count_7_days = linfit_7_days(projected_dates_float)
-	# projected_donor_count_30_days = linfit_30_days(projected_dates_float)
+	# projected_money_count_7_days = linfit_7_days(projected_dates_float)
+	# projected_money_count_30_days = linfit_30_days(projected_dates_float)
 
 	# # print('projected_dates:', projected_dates)
-	# # print('projected_donor_count:\n', projected_donor_count)
-	# print('shape projected_donor_count_7_days:\n', np.shape(projected_donor_count_7_days))
-	# projected_datetime_3_5Mil_7_days = projected_dates[np.flatnonzero(projected_donor_count_7_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
+	# # print('projected_money_count:\n', projected_money_count)
+	# print('shape projected_money_count_7_days:\n', np.shape(projected_money_count_7_days))
+	# projected_datetime_3_5Mil_7_days = projected_dates[np.flatnonzero(projected_money_count_7_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
 	# # SOMETIMES THE CODE ERRORS HERE. THIS IS THE RESULT OF THE PROJECTION NEVER REACHING $3.5
 	# # MILLION BECAUSE THE RATE OF GROWTH IS TOO LOW. TO FIX: IN list(range(1,X)) ABOVE, MAKE X
 	# # BIGGER UNTIL ERROR GOES AWAY. X IS THE NUMBER OF TIMESTEPS INTO THE FUTURE TO PROJECT.
 	# projected_date_3_5Mil_7_days = projected_datetime_3_5Mil_7_days.strftime('%b %d, %Y')
 	# print('projected_date_3_5Mil_7_days:', projected_date_3_5Mil_7_days)
-	# projected_datetime_3_5Mil_30_days = projected_dates[np.flatnonzero(projected_donor_count_30_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
+	# projected_datetime_3_5Mil_30_days = projected_dates[np.flatnonzero(projected_money_count_30_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
 	# projected_date_3_5Mil_30_days = projected_datetime_3_5Mil_30_days.strftime('%b %d, %Y')
 	# -----------------------------------------------------------------------------------------------
 
@@ -349,16 +349,16 @@ def YangDollarCounter():
 	# ax1.plot(df_30_days.index, df_30_days['Trendline 1 Month'], color='#b2b74e')
 	ax2.plot(df.index, df['Rate'], linewidth=1, color='#4b7a46', marker='^', markersize=3, markerfacecolor='none', markeredgecolor='#4b7a46')
 	ax1.set_xlabel('DateTime', color='k')
-	ax1.set_ylabel('Total dollars', color='k')
+	ax1.set_ylabel('Money Raised', color='k')
 	ax1.tick_params('y', colors='k')
 	# ax1.legend(labels=['Dollar count','7-day trend','30-day trend'])
 	ax2.set_ylabel('Dollars/Day', color='#4b7a46')
 	ax2.tick_params('y', colors='#4b7a46')
-	ax2.legend(labels=['Dollar growth'])
+	ax2.legend(labels=['Donations growth'])
 	f.autofmt_xdate()
 	# plt.title('$3.5 million projected date: {0} or {1}'.format(projected_date_3_5Mil_7_days, projected_date_3_5Mil_30_days))
-	plt.title('Dollars Raised')
-	plt.savefig('DollarCountYang.png', bbox_inches='tight')
+	plt.title('Money Raised')
+	plt.savefig('MoneyRaisedYang.png', bbox_inches='tight')
 	plt.show()
 
 	# ''' --------------- '''
@@ -368,8 +368,8 @@ def YangDollarCounter():
 	# try:
 	# 	element_present = EC.presence_of_element_located((By.CLASS_NAME, 'donor-count-number'))
 	# 	WebDriverWait(driver, timeout).until(element_present)
-	# 	donor_count_3 = driver.find_element_by_class_name('donor-count-number')
-	# 	print('donor_count_3:\n', donor_count_3.text)
+	# 	money_count_3 = driver.find_element_by_class_name('donor-count-number')
+	# 	print('money_count_3:\n', money_count_3.text)
 	# except TimeoutException:
 	# 	print("Timed out waiting for page to load")
 
@@ -1647,13 +1647,13 @@ def OddsPollsCorrelation(candidate):
 
 
 ''' --- Run YangDonorCounter() --- '''
-# WARNING: THE DONOR COUNTER HAS BEEN REPLACED BY A DOLLARCOUNTER.
-# RUN YangDollarCounter() INSTEAD.
+# WARNING: THE DONOR COUNTER HAS BEEN REPLACED BY A MONEY COUNTER.
+# RUN YangMoneyRaised() INSTEAD.
 # YangDonorCounter()
 ''' -------------------------- '''
 
-''' --- Run YangDollarCounter() --- '''
-YangDollarCounter()
+''' --- Run YangMoneyRaised() --- '''
+YangMoneyRaised()
 ''' --------------------------- '''
 
 
@@ -1698,7 +1698,7 @@ PlotCampaignBetting()
 ''' --------------------------- '''
 
 ''' --- Run OddsPollsCorrelation() --- '''
-OddsPollsCorrelation('ORourke')
+# OddsPollsCorrelation('ORourke')
 ''' ---------------------------------- '''
 
 
