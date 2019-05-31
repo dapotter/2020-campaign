@@ -315,25 +315,25 @@ def YangMoneyRaised():
 	print('df_7_days with Trendline:\n', df_7_days)
 
 	# -----------------------------------------------------------------------------------------------
-	# # $3.5 MILLION DONATION LINEAR PROJECTIONS. UNCOMMENT TO USE:
-	# start_date = current_time
-	# # date_step = datetime.timedelta(days=7)
-	# projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,800))]
-	# projected_dates_float = mdates.date2num(projected_dates)
-	# projected_money_count_7_days = linfit_7_days(projected_dates_float)
-	# projected_money_count_30_days = linfit_30_days(projected_dates_float)
+	# $3.5 MILLION DONATION LINEAR PROJECTIONS. UNCOMMENT TO USE:
+	start_date = current_time
+	# date_step = datetime.timedelta(days=7)
+	projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,800))]
+	projected_dates_float = mdates.date2num(projected_dates)
+	projected_money_count_7_days = linfit_7_days(projected_dates_float)
+	projected_money_count_30_days = linfit_30_days(projected_dates_float)
 
-	# # print('projected_dates:', projected_dates)
-	# # print('projected_money_count:\n', projected_money_count)
-	# print('shape projected_money_count_7_days:\n', np.shape(projected_money_count_7_days))
-	# projected_datetime_3_5Mil_7_days = projected_dates[np.flatnonzero(projected_money_count_7_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
-	# # SOMETIMES THE CODE ERRORS HERE. THIS IS THE RESULT OF THE PROJECTION NEVER REACHING $3.5
-	# # MILLION BECAUSE THE RATE OF GROWTH IS TOO LOW. TO FIX: IN list(range(1,X)) ABOVE, MAKE X
-	# # BIGGER UNTIL ERROR GOES AWAY. X IS THE NUMBER OF TIMESTEPS INTO THE FUTURE TO PROJECT.
-	# projected_date_3_5Mil_7_days = projected_datetime_3_5Mil_7_days.strftime('%b %d, %Y')
-	# print('projected_date_3_5Mil_7_days:', projected_date_3_5Mil_7_days)
-	# projected_datetime_3_5Mil_30_days = projected_dates[np.flatnonzero(projected_money_count_30_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
-	# projected_date_3_5Mil_30_days = projected_datetime_3_5Mil_30_days.strftime('%b %d, %Y')
+	# print('projected_dates:', projected_dates)
+	# print('projected_money_count:\n', projected_money_count)
+	print('shape projected_money_count_7_days:\n', np.shape(projected_money_count_7_days))
+	projected_datetime_3_5Mil_7_days = projected_dates[np.flatnonzero(projected_money_count_7_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
+	# SOMETIMES THE CODE ERRORS HERE. THIS IS THE RESULT OF THE PROJECTION NEVER REACHING $3.5
+	# MILLION BECAUSE THE RATE OF GROWTH IS TOO LOW. TO FIX: IN list(range(1,X)) ABOVE, MAKE X
+	# BIGGER UNTIL ERROR GOES AWAY. X IS THE NUMBER OF TIMESTEPS INTO THE FUTURE TO PROJECT.
+	projected_date_3_5Mil_7_days = projected_datetime_3_5Mil_7_days.strftime('%b %d, %Y')
+	print('projected_date_3_5Mil_7_days:', projected_date_3_5Mil_7_days)
+	projected_datetime_3_5Mil_30_days = projected_dates[np.flatnonzero(projected_money_count_30_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
+	projected_date_3_5Mil_30_days = projected_datetime_3_5Mil_30_days.strftime('%b %d, %Y')
 	# -----------------------------------------------------------------------------------------------
 
 	# ''' Plotting data: '''
@@ -345,8 +345,8 @@ def YangMoneyRaised():
 	f, ax1 = plt.subplots(figsize=(8,8))
 	ax2 = ax1.twinx()
 	ax1.plot(df.index, df['Count'], linewidth=1, color='k', marker='o', markersize=3, markerfacecolor='none', markeredgecolor='k')
-	# ax1.plot(df_7_days.index, df_7_days['Trendline 1 Week'], color='r')
-	# ax1.plot(df_30_days.index, df_30_days['Trendline 1 Month'], color='#b2b74e')
+	ax1.plot(df_7_days.index, df_7_days['Trendline 1 Week'], color='r')
+	ax1.plot(df_30_days.index, df_30_days['Trendline 1 Month'], color='#b2b74e')
 	ax2.plot(df.index, df['Rate'], linewidth=1, color='#4b7a46', marker='^', markersize=3, markerfacecolor='none', markeredgecolor='#4b7a46')
 	ax1.set_xlabel('DateTime', color='k')
 	ax1.set_ylabel('Money Raised', color='k')
@@ -356,8 +356,8 @@ def YangMoneyRaised():
 	ax2.tick_params('y', colors='#4b7a46')
 	ax2.legend(labels=['Donations growth'])
 	f.autofmt_xdate()
-	# plt.title('$3.5 million projected date: {0} or {1}'.format(projected_date_3_5Mil_7_days, projected_date_3_5Mil_30_days))
-	plt.title('Money Raised')
+	plt.title('$3.5 million projected date: {0} or {1}'.format(projected_date_3_5Mil_7_days, projected_date_3_5Mil_30_days))
+	# plt.title('Money Raised')
 	plt.savefig('MoneyRaisedYang.png', bbox_inches='tight')
 	plt.show()
 
@@ -769,14 +769,35 @@ def CampaignBetting():
 	print('scraped name_list:\n', name_list)
 	print('scraped pcnt_list:\n', odds_list)
 	print('len scraped name_list:', len(name_list))
-	print('len scraped pcnt_list:', len(odds_list))
+	print('len scraped odds_list:', len(odds_list))
 
 	# Finding 'Other' in the names list to split the list into Democratic, Republican and Presidential primaries
 	# A better way would be to grab each list with independent calls
 	# [add 1 to every element x of [16, 47, 53 <- indices where 'Other' is located]]
 	# Results in [17, 48, 54]
-	end_indices = [x+1 for x in [i for i, n in enumerate(name_list) if n == 'Other']]
-	start_indices = [0] + end_indices[0:-1]
+	num_other = name_list.count('Other')
+	if num_other == 3:
+		# Using 'Other' to find the end of each list. This works unless one of the lists
+		# doesn't have 'Other', in which case the else loop below uses the difference
+		# between one list's leading candidate and the previous list's bottom candidate
+		end_indices = [x+1 for x in [i for i, n in enumerate(name_list) if n == 'Other']]
+		start_indices = [0] + end_indices[0:-1]
+	else:
+		# In this loop, the odds_list[i+1] - odds_list[i] is computed. If that difference
+		# is larger than 10, then that likely signals the start of a new list where the
+		# leader's (Trump's) percentage is high and last person from the previous list
+		# (Hickenlooper) is very low. The difference should be at least 10. Because the
+		# last list (Republicans) doesn't have a list that follows it, just tack on the
+		# last index to end_indices.
+		odds_shifted = odds_list[1:]
+		odds_shifted.extend([0]) # This amends without the need for assignment
+		print('odds_shifted:\n', odds_shifted)
+		odds_diff = np.array(odds_shifted) - np.array(odds_list)
+		print('odds_diff:\n', odds_diff)
+		# find where odds differences are > 10. Add one to account for non-inclusive end
+		end_indices = [i for i in [i for i,d in enumerate(odds_diff) if d > 10]]
+		end_indices.extend([len(odds_list)-1])
+		start_indices = [0] + end_indices[0:-1]
 
 	grouped_name_list = []; grouped_odds_list = []
 	for i,j in zip(start_indices, end_indices):
@@ -799,6 +820,9 @@ def CampaignBetting():
 	# new_ <- Just pulled from website
 	# old_ <- Data from csv from previous scrape
 
+	# Warning: This may error here if electionbettingodds.com has removed
+	# 'Other' classification from the ends of its list.
+	print('THIS MAY ERROR HERE: SEE NOTES IN CODE')
 	new_dem_fields = grouped_name_list[0]
 	new_rep_fields = grouped_name_list[2]
 	new_pres_fields = grouped_name_list[1]
@@ -1501,7 +1525,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 
 
-def OddsPollsCorrelation(candidate):
+def OddsPollsCorrelation():
 
 	df_dem_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_dem_odds.pkl')
 	df_dem_polls = pd.read_pickle('/home/dp/Documents/Campaign/pickle/NationalPolling_df.pkl')
@@ -1698,7 +1722,7 @@ PlotCampaignBetting()
 ''' --------------------------- '''
 
 ''' --- Run OddsPollsCorrelation() --- '''
-# OddsPollsCorrelation('ORourke')
+# OddsPollsCorrelation()
 ''' ---------------------------------- '''
 
 
