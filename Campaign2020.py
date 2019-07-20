@@ -210,11 +210,12 @@ def YangMoneyRaised():
 	#driver = webdriver.Chrome('/home/dp/Downloads/')  # Optional argument, if not specified will search path.
 	url = 'https://www.yang2020.com/'
 	driver.get(url)
-	time.sleep(10) # Allow the user see website load
+	time.sleep(15) # Allow the user see website load
 	
 	money_count_str = driver.find_element_by_class_name('donor-count-number').text
 	money_count_str = money_count_str.replace('$','') # Remove $ symbol
 	money_count_str = money_count_str.replace(',','') # Remove ,
+	print('money_count_str:\n', money_count_str)
 	money_count = int(float(money_count_str))
 	
 	money_goal_str = driver.find_element_by_css_selector('.total.goal').text
@@ -384,11 +385,11 @@ def FEC():
 	# Columns: contribution_receipt_date and contribution_receipt_amount
 
 	FEC_files_path = '/home/dp/Documents/Campaign/FEC/'
-	FEC_files = glob.glob(os.path.join(FEC_files_path, '*Itemized.csv')) # H500 file paths in a list
+	FEC_itemized_files = glob.glob(os.path.join(FEC_files_path, '*Itemized.csv')) # H500 file paths in a list
 
 	
-	fields = ['committee_name','contribution_receipt_date','contribution_receipt_amount', 'contributor_last_name'] # 'contributor_name'
-	df_gen = (pd.read_csv(f, header='infer', usecols=fields) for f in FEC_files)
+	fields = ['committee_name','contribution_receipt_date','contribution_receipt_amount','contributor_aggregate_ytd','contributor_state','contributor_last_name'] # 'contributor_name'
+	df_gen = (pd.read_csv(f, header='infer', usecols=fields) for f in FEC_itemized_files)
 	df = pd.concat(df_gen, axis=0, sort=True)
 	df.drop(labels = df[df['contributor_last_name']=='ActBlue'].index, axis=0, inplace=True)
 	print('df:\n', df)
@@ -466,6 +467,41 @@ def FEC():
 
 	df.reset_index(inplace=True)
 
+
+	states = ['OH','MI','WI','PA','FL','CO','IA','MN','NV','NH','NC','VA']
+	# ----------------------------------
+	# Number of unique donations in each swing state shows each
+	# candidate's support in that state.
+	df_geo = df[['committee_name','contributor_state','contributor_aggregate_ytd']]
+	df_geo.set_index(['committee_name','contributor_state'], inplace=True)
+	df_geo_counts = df_geo.groupby(level=['committee_name','contributor_state']).size()
+	df_geo_counts.sort_index(inplace=True)
+	print(df_geo_counts.index.levels)
+	print(df_geo_counts)
+	# print(df_geo_counts.iloc[df_geo_counts.index.get_level_values('contributor_state') == 'OH']) #,'PA','MI','WI','FL']])
+	df_geo_counts = df_geo_counts.loc[(slice(None)), states]
+	# Ohio only: df_geo_counts = df_geo_counts.loc[(slice(None), 'OH')]
+	# df_geo_counts.sort_values(inplace=True)
+
+	# Rank all candidates for each state:
+	# First make the states the columns, rows the candidates:
+
+	df_geo_counts = df_geo_counts.reset_index(name='contributor_count')
+	print(df_geo_counts)
+
+	# Bar Plot: Unique Contributor Count vs Committee for each swing state:
+	sns.barplot(x='committee_name', y='contributor_count', hue='contributor_state', data=df_geo_counts)
+	plt.show()
+
+	df_geo_sum = df_geo.groupby(level=['committee_name','contributor_state'])['contributor_aggregate_ytd'].sum()
+	df_geo_sum.sort_index(inplace=True)
+	df_geo_sum = df_geo_sum.loc[(slice(None), states)]
+	df_geo_sum = df_geo_sum.reset_index(name='contribution_aggregate_ytd_sum')
+	print(df_geo_sum)
+
+	# Bar Plot: YTD Contribution Sum vs Committee for each swing state:
+	sns.barplot(x='committee_name', y='contribution_aggregate_ytd_sum', hue='contributor_state', data=df_geo_sum)
+	plt.show()
 
 	# Making plots from df_contribution_size:
 
@@ -1386,9 +1422,10 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 	# Dropping Donald Trump from df:
 	df_no_dt_index = df[df['Name']=='realDonaldTrump'].index
 	df.drop(df_no_dt_index, inplace=True)
-	print('***************************************df:\n', df.to_string())
+	print('*************************************** df:\n', df.to_string())
 
 	''' Time Series Line Plots '''
+	plt.close()
 	cols = [col for col in df.columns if col != 'Name' and col != 'Date']
 	print('cols:\n', cols)
 	for title in cols:
@@ -1399,6 +1436,7 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 		plt.savefig('TwitterMetrics '+title, bbox_inches='tight')
 
 	# Boxplot of Daily Followers Gained:
+	plt.close()
 	df.boxplot(column='Daily Followers Gained', by='Name')#; plt.xlabel('Date'); plt.ylabel('Daily Followers Gained')
 	plt.xticks(rotation='vertical'); plt.ylabel('Daily Followers Gained')
 	plt.savefig('TwitterMetrics Daily Followers Gained Boxplot', bbox_inches='tight')
@@ -1501,14 +1539,18 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 
 	df_all_pcnt_growth.columns = start_end_str_list
 	print('df_all_pcnt_growth:\n', df_all_pcnt_growth.to_string())
+	df_all_pcnt_growth_avg = df_all_pcnt_growth.mean(axis=1)
+	print('df_all_pcnt_growth_avg:\n', df_all_pcnt_growth_avg.to_string())
 
-	plt.close()
-	label = df_pcnt_growth.index
-	title = '% Growth in Twitter Following' #col_of_interest
-	ind = df_pcnt_growth.index
-	fig, ax = plt.subplots(figsize=(6,6))
-	ax = df_all_pcnt_growth.plot.bar(title=title, rot=45)#x=ind, y=col_of_interest, label=label, title=title)
-	plt.xlabel('Candidates'); plt.ylabel('% Growth')
+
+	fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,4))
+	df_all_pcnt_growth.plot.bar(title='Weekly % Growth - Last 6 weeks', rot=45, ax=ax1)
+	df_all_pcnt_growth_avg.plot.bar(title='Avg % Growth - Last 6 weeks', rot=45, ax=ax2)
+	ax1.set_xlabel('Candidates')
+	ax1.set_ylabel('% Growth')
+	ax2.set_xlabel('Candidates')
+	ax2.set_ylabel('Avg % Growth')
+	plt.subplots_adjust(wspace=0.2)
 	plt.savefig('TwitterMetrics - % Growth.png', bbox_inches='tight')
 	plt.show()
 
@@ -1529,6 +1571,10 @@ def OddsPollsCorrelation():
 
 	df_dem_odds = pd.read_pickle('/home/dp/Documents/Campaign/pickle/BettingOdds_df_dem_odds.pkl')
 	df_dem_polls = pd.read_pickle('/home/dp/Documents/Campaign/pickle/NationalPolling_df.pkl')
+
+	df_dem_odds.index = pd.to_datetime(df_dem_odds.index)
+	df_dem_polls.index = pd.to_datetime(df_dem_polls.index)
+
 	print('df_dem_odds:\n', df_dem_odds.to_string())
 	print('df_dem_polls:\n', df_dem_polls.to_string())
 
@@ -1593,14 +1639,23 @@ def OddsPollsCorrelation():
 	df_dem_polls_day_avg_stack.sort_index(level=0, inplace=True)
 	print('df_dem_polls_day_avg_stack:\n', df_dem_polls_day_avg_stack)
 
+	a = df_dem_odds_day_avg_stack.loc[['Biden','2019-04-11']]
+	print('a:\n', a)
+	b = df_dem_polls_day_avg_stack.loc[['Biden','2019-04-11']]
+	print('b:\n', b)
+
 	# NOTE: THE RESULT OF THIS CONCATENATION LOOKS LIKE A MESS. NOT SURE WHY, BUT SORTING THE INDEX FIXES THE PROBLEM.
 	# THE NON-CONCATENATION AXIS (ROWS) ARE NOT ALIGNED, AND THEREFORE NEED TO BE SORTED, DO SO BY SPECIFYING sort=True:
-	df_odds_polls = pd.concat((df_dem_odds_day_avg_stack, df_dem_polls_day_avg_stack), axis=1, ignore_index=False, join='inner', sort=True)
+	df_odds_polls = df_dem_polls_day_avg_stack.join(df_dem_odds_day_avg_stack)
+	print('df_odds_polls:\n', df_odds_polls.to_string())
+
 	df_odds_polls['OddsPollsRatio'] = df_odds_polls['Odds']/df_odds_polls['Polls']
 	df_odds_polls.replace(np.inf, np.nan, inplace=True) # Odds/Polls = 4.15/0.00 = inf. Replacing all inf.
 	print('df_odds_polls:\n', df_odds_polls)
 
 	candidate_list = df_odds_polls.index.get_level_values(0).unique().tolist()
+	print('candidate list:\n', candidate_list)
+
 	corr_list = []
 	# Iterate through the candidate index and calculate the Odds-Polls correlation:
 	for candidate in candidate_list:
@@ -1637,7 +1692,7 @@ def OddsPollsCorrelation():
 	plt.savefig('Odds_vs_Polls.png', bbox_inches='tight')
 	plt.show()
 	# ---------------------------------------------------------------------------------------
-	# Boxplot of odd:polls ratio for each candidate.
+	# Boxplot of odds:polls ratio for each candidate.
 	# Averaging each candidates Odds and Polls data to create a ratio.
 	df_odds_polls_ratio_sorted_avg = df_odds_polls[['Candidate','OddsPollsRatio']].groupby('Candidate').mean()
 	df_odds_polls_ratio_sorted_avg.rename(columns={'OddsPollsRatio':'OddsPollsRatioAvg'}, inplace=True)
@@ -1649,14 +1704,197 @@ def OddsPollsCorrelation():
 	p.set(ylabel='Betting Odds:National Polls')
 	p.set_xticklabels(p.get_xticklabels(),rotation=30)
 	# p.set(title='2020 Democratic Primary: Betting Odds - to - National Polls Ratio')
-	plt.annotate('Time period: March 25 - May 18, 2019\nBetting odds: electionbettingodds.com\nPolls: realclearpolitics.com', xy=(-0.15,4.7))
+	print('df_odds_polls:\n', df_odds_polls)
+
+	start_dt = df_odds_polls.Date.iloc[0].date().strftime('%b %d, %Y')
+	end_dt = df_odds_polls.Date.iloc[-1].date().strftime('%b %d, %Y')
+	plt.annotate('Time period: {} - {}\nBetting odds: electionbettingodds.com\nPolls: realclearpolitics.com'.format(start_dt, end_dt), xy=(-0.15,4.7))
 	plt.savefig('Odds_to_Polls_Ratio.png', bbox_inches='tight')
 	plt.show()
 
+	# ---------------------------------------------------------------------------------------
+	# Importing name recognition data:
+	df = pd.read_csv('/home/dp/Documents/Campaign/CandidateNameRecognition.csv', header='infer')
+	# print('df:\n', df)
+	# print('df.columns:\n', df.columns)
+
+	# Removing first names from df['Candidate']
+	df.columns = df.columns.map(lambda x: str(x).replace(' ',''))
+	candidates = df['Candidate'].values.tolist()
+	space_index = [str(c).index(' ') for c in df['Candidate']]
+	last_names = [c[i+1:] for c,i in zip(candidates, space_index)]
+	df['Candidate'] = last_names
+
+	# Removing the ' in O'Rourke:
+	df['Candidate'] = df['Candidate'].map(lambda x: str(x).replace('\'',''))
+	
+	# Removing all % from column data, iterating through each column.
+	# IS THERE A WAY TO REMOVE ALL %'S WITHOUT ITERATING THROUGH EACH COLUMN?
+	for col in df.columns:
+		df[col] = df[col].map(lambda x: str(x).replace('%',''))
+		df[col] = pd.to_numeric(df[col], errors='ignore')
+
+	# print('df after numeric conversion:\n', df)
+	# print('df data types:\n', df.dtypes)
+
+	df['UFR'] = df['Unfavorable']/df['Favorable']
+	df['HO'] = 100 - df['NHO']
+
+	df_name_rec = df
+	df_name_rec.set_index('Candidate', inplace=True)
+	print('df_name_rec:\n', df_name_rec)
+
+	df_odds_polls_avg = df_odds_polls.groupby('Candidate').mean()
+	print('df_odds_polls_avg:\n', df_odds_polls_avg)
+
+	print('df_name_rec.index.dtype:\n', df_name_rec.index.dtype)
+	print('df_odds_polls_avg.index.dtype:\n', df_odds_polls_avg.index.dtype)
+
+	# df_odds_polls_name_rec = pd.concat((df_name_rec, df_odds_polls_ratio_sorted_avg), axis=1, ignore_index=False)
+	df_odds_polls_name_rec = df_name_rec.join(df_odds_polls_avg, how='inner')
+	print('df_odds_polls_name_rec:\n', df_odds_polls_name_rec)
+
+	df_odds_polls_name_rec['OddsHORatio'] = df_odds_polls_name_rec['Odds'] / df_odds_polls_name_rec['HO']
+	df_odds_polls_name_rec['PollsHORatio'] = df_odds_polls_name_rec['Polls'] / df_odds_polls_name_rec['HO']
+	df_odds_polls_name_rec['Polarization'] = df_odds_polls_name_rec['Unfavorable'] / df_odds_polls_name_rec['Favorable']
+	# Ceiling:
+	df_odds_polls_name_rec['Agnostic'] = df_odds_polls_name_rec['NHO'] + df_odds_polls_name_rec['HONO']
+	df_odds_polls_name_rec['PollsCeiling'] = df_odds_polls_name_rec['Agnostic'] / df_odds_polls_name_rec['Polls']
+	df_odds_polls_name_rec['FavCeiling'] = df_odds_polls_name_rec['Agnostic'] / df_odds_polls_name_rec['Favorable']
+	df_agnostic = df_odds_polls_name_rec['Agnostic'].sort_values()
+	df_polls_ceiling = df_odds_polls_name_rec['PollsCeiling'].sort_values()
+	df_fav_ceiling = df_odds_polls_name_rec['FavCeiling'].sort_values()
+	print('df_polls_ceiling:\n', df_polls_ceiling)
+	print('df_fav_ceiling:\n', df_fav_ceiling)
+	print(df_fav_ceiling.index)
+	print(df_fav_ceiling.values)
+
+
+
+	# Plotting Odds to Heard-of ratio, Polls to Heard-of ratio:
+	f, ax1 = plt.subplots(figsize=(5,4))
+	df_odds_polls_name_rec.sort_values(by='OddsHORatio', inplace=True)
+	df_odds_polls_name_rec.plot.bar(y='OddsHORatio', use_index=True, ax=ax1)
+	plt.show()
+	plt.close()
+	f, ax2 = plt.subplots(figsize=(5,4))
+	df_odds_polls_name_rec.sort_values(by='PollsHORatio', inplace=True)
+	df_odds_polls_name_rec.plot.bar(y='PollsHORatio', use_index=True, ax=ax2)
+	plt.show()
+	plt.close()
+	f, ax3 = plt.subplots(figsize=(5,4))
+	df_odds_polls_name_rec.sort_values(by='Polarization', inplace=True)
+	df_odds_polls_name_rec.plot.bar(y='Polarization', use_index=True, ax=ax3)
+	plt.show()
+
+	# Ceilings:
+	agnostic_palette = []
+	for c_agnostic in df_agnostic.index:
+		if c_agnostic == 'Yang' or c_agnostic == 'Gabbard':
+			agnostic_palette.append('#004ecc')
+		else:
+			agnostic_palette.append('#aaaaaa')
+
+	polls_ceil_palette = []
+	for c_polls in df_polls_ceiling.index:
+		if c_polls == 'Yang' or c_polls == 'Gabbard':
+			polls_ceil_palette.append('#004ecc')
+		else:
+			polls_ceil_palette.append('#aaaaaa')
+
+	fav_ceil_palette = []
+	for c_fav in df_polls_ceiling.index:
+		if c_fav == 'Yang' or c_fav == 'Gabbard':
+			fav_ceil_palette.append('#004ecc')
+		else:
+			fav_ceil_palette.append('#aaaaaa')
+	# print('fav_ceil_palette:\n', fav_ceil_palette)
+
+	# % Agnostic voters
+	plt.close()
+	f, ax = plt.subplots(figsize=(5,4))
+	sns.barplot(x=df_agnostic.index, y=df_agnostic.values, palette=agnostic_palette, ax=ax)
+	ax.set_ylabel('% Agnostic')
+	ax.set_xticklabels(df_agnostic.index, rotation=90)
+	plt.savefig('Odds_Polls_Correlation__Pcnt_Agnostic.png', bbox_inches='tight')
+	plt.show()
+	
+	plt.close()
+	f, (ax1, ax2) = plt.subplots(1,2, figsize=(9,4))
+	sns.barplot(x=df_polls_ceiling.index, y=df_polls_ceiling.values, palette=polls_ceil_palette, ax=ax1)
+	sns.barplot(x=df_fav_ceiling.index, y=df_fav_ceiling.values, palette=fav_ceil_palette, ax=ax2)
+	ax1.set_ylabel('% Agnostic / % Polling')
+	ax2.set_ylabel('% Agnostic / % Favorable')
+	ax1.set_xticklabels(df_polls_ceiling.index, rotation=90)
+	ax2.set_xticklabels(df_fav_ceiling.index, rotation=90)
+	ax1.annotate('Agnostic: % of all Americans who\nare undecided or unaware.\nSource: morningconsult.com\nPolling: realclearpolitics.com', xy=(-0.15, 70.0))
+	ax2.annotate('Favorable: % of all Americans who\nview the candidate favorably.\nSource: morningconsult.com', xy=(-0.15,3.6))
+	plt.subplots_adjust(wspace=0.2)
+	plt.suptitle('Room for Growth in Polls and Favorability Among Undecided Voters')
+	plt.savefig('Odds_Polls_Correlation__Polls_Favorability_Ceilings.png', bbox_inches='tight')
+	plt.show()
 
 	return
 
 
+
+def NameRecognition():
+	df = pd.read_csv('/home/dp/Documents/Campaign/CandidateNameRecognition.csv', header='infer')
+	# print('df:\n', df)
+	# print('df.columns:\n', df.columns)
+
+	# Removing first names from df['Candidate']
+	df.columns = df.columns.map(lambda x: str(x).replace(' ',''))
+	candidates = df['Candidate'].values.tolist()
+	space_index = [str(c).index(' ') for c in df['Candidate']]
+	last_names = [c[i+1:] for c,i in zip(candidates, space_index)]
+	df['Candidate'] = last_names
+
+	# Removing the ' in O'Rourke:
+	df['Candidate'] = df['Candidate'].map(lambda x: str(x).replace('\'',''))
+
+	# Removing all % from column data, iterating through each column.
+	# IS THERE A WAY TO REMOVE ALL %'S WITHOUT ITERATING THROUGH EACH COLUMN?
+	for col in df.columns:
+		df[col] = df[col].map(lambda x: str(x).replace('%',''))
+		df[col] = pd.to_numeric(df[col], errors='ignore')
+
+	# print('df after numeric conversion:\n', df)
+	# print('df data types:\n', df.dtypes)
+
+	df['UFR'] = df['Unfavorable']/df['Favorable']
+	df['HO'] = 100 - df['NHO']
+
+	# -----------------------------------------------
+	# Bar plots of all stats:
+	f, (ax1,ax2,ax3,ax4) = plt.subplots(1,4, figsize=(14,3))
+	df.plot.bar(x='Candidate', y='Favorable', ax=ax1)
+	df.plot.bar(x='Candidate', y='HONO', ax=ax2)
+	df.plot.bar(x='Candidate', y='NHO', ax=ax3)
+	df.plot.bar(x='Candidate', y='Unfavorable', ax=ax4)
+	plt.show()
+
+	# -----------------------------------------------
+	# Plot: Unfavorability to Favorability ratio:
+	# Unfavorability to Favorability ratio sorted
+	df.sort_values(by='UFR', axis=0, inplace=True)
+	print('df after sorting by UFR:\n', df)
+
+	plt.close()
+	f, ax = plt.subplots(figsize=(5,4))
+	df.plot.bar(x='Candidate', y='UFR', ax=ax)
+	plt.show()
+
+	# -----------------------------------------------
+	df.sort_values(by='HO', axis=0, inplace=True)
+	print('df after sorting by HO:\n', df)
+
+	plt.close()
+	f, ax = plt.subplots(figsize=(5,4))
+	df.plot.bar(x='Candidate', y='HO', ax=ax)
+	plt.show()
+
+	return
 
 
 ''' ----------------------------------------- Campaign 2020 ----------------------------------------- '''
@@ -1677,9 +1915,8 @@ def OddsPollsCorrelation():
 ''' -------------------------- '''
 
 ''' --- Run YangMoneyRaised() --- '''
-YangMoneyRaised()
+# YangMoneyRaised()
 ''' --------------------------- '''
-
 
 
 ''' --- Scheduling the YangDonorCounter() data collection: --- '''
@@ -1692,7 +1929,7 @@ YangMoneyRaised()
 # sched.shutdown()
 
 ''' --- Federal Election Commission --- '''
-# FEC()
+# df = FEC()
 ''' ----------------------------------- '''
 
 
@@ -1722,18 +1959,23 @@ PlotCampaignBetting()
 ''' --------------------------- '''
 
 ''' --- Run OddsPollsCorrelation() --- '''
-# OddsPollsCorrelation()
+OddsPollsCorrelation()
+''' ---------------------------------- '''
+
+''' --- Run NameRecognition() --- '''
+# NameRecognition()
 ''' ---------------------------------- '''
 
 
 ''' ----------------------------------------- WebMetrics() ----------------------------------------- '''
 
 ''' --- Run WebMetrics() --- '''
-# df_all = WebMetrics() # WARNING: RUNNING THIS WILL NOT UPDATE CURRENT CSV DATA BUT WILL OVERWRITE IT WITH
-						# THE LATEST 30 DAYS OF TWITTER DATA. CURRENT CSV FILES ARE BACKED UP IN THE
-						# FOLDER 'Campaign/TwitterMetrics csv backup'. WebMetrics() NEEDS THE CAPABILITY
-						# TO LOAD CSV DATA, ADD THE MOST RECENT SCRAPED DATA TO IT AND WRITE BACK TO CSV.
-# PlotWebMetrics(['2019,4,1','2019,4,8','2019,4,15','2019,4,22','2019,4,29','2019,5,5'],['2019,4,8','2019,4,15','2019,4,22','2019,4,29','2019,5,5','2019,5,14'])
-''' ----------------------------- '''
+# df_all = WebMetrics()   # WARNING: RUNNING THIS WILL NOT UPDATE CURRENT CSV DATA BUT WILL OVERWRITE IT WITH
+# 						# THE LATEST 30 DAYS OF TWITTER DATA. CURRENT CSV FILES ARE BACKED UP BY DATE IN THE
+# 						# FOLDER 'Campaign/TwitterMetrics csv backup'. WebMetrics() NEEDS THE CAPABILITY
+# 						# TO LOAD CSV DATA, ADD THE MOST RECENT SCRAPED DATA TO IT AND WRITE BACK TO CSV.
+# 						# WILL HAVE TO ADD THIS CAPABILITY AT SOME POINT BUT FOR NOW COPY AND PASTE WILL BE USED.
+# PlotWebMetrics(['2019,5,1','2019,5,8','2019,5,15','2019,5,22','2019,5,29','2019,6,5'],['2019,5,8','2019,5,15','2019,5,22','2019,5,29','2019,6,5','2019,6,12'])
+''' ------------------------- '''
 
 
