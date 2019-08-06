@@ -212,13 +212,15 @@ def YangMoneyRaised():
 	driver.get(url)
 	time.sleep(15) # Allow the user see website load
 	
-	money_count_str = driver.find_element_by_class_name('donor-count-number').text
+	# money_count_str = driver.find_element_by_class_name('donor-count-number').text
+	money_count_str = driver.find_element_by_class_name('yang-progress').text
 	money_count_str = money_count_str.replace('$','') # Remove $ symbol
 	money_count_str = money_count_str.replace(',','') # Remove ,
 	print('money_count_str:\n', money_count_str)
 	money_count = int(float(money_count_str))
 	
-	money_goal_str = driver.find_element_by_css_selector('.total.goal').text
+	# money_goal_str = driver.find_element_by_css_selector('.total.goal').text
+	money_goal_str = driver.find_element_by_class_name('yang-progress').text
 	money_goal_str = money_goal_str.replace('$','') # Remove $ symbol
 	money_goal_str = money_goal_str.replace(',','') # Remove $ symbol
 	money_goal = int(float(money_goal_str))
@@ -319,7 +321,7 @@ def YangMoneyRaised():
 	# $3.5 MILLION DONATION LINEAR PROJECTIONS. UNCOMMENT TO USE:
 	start_date = current_time
 	# date_step = datetime.timedelta(days=7)
-	projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,800))]
+	projected_dates = [datetime.timedelta(days=day)+current_time for day in list(range(1,2000))]
 	projected_dates_float = mdates.date2num(projected_dates)
 	projected_money_count_7_days = linfit_7_days(projected_dates_float)
 	projected_money_count_30_days = linfit_30_days(projected_dates_float)
@@ -327,14 +329,15 @@ def YangMoneyRaised():
 	# print('projected_dates:', projected_dates)
 	# print('projected_money_count:\n', projected_money_count)
 	print('shape projected_money_count_7_days:\n', np.shape(projected_money_count_7_days))
-	projected_datetime_3_5Mil_7_days = projected_dates[np.flatnonzero(projected_money_count_7_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
-	# SOMETIMES THE CODE ERRORS HERE. THIS IS THE RESULT OF THE PROJECTION NEVER REACHING $3.5
-	# MILLION BECAUSE THE RATE OF GROWTH IS TOO LOW. TO FIX: IN list(range(1,X)) ABOVE, MAKE X
-	# BIGGER UNTIL ERROR GOES AWAY. X IS THE NUMBER OF TIMESTEPS INTO THE FUTURE TO PROJECT.
-	projected_date_3_5Mil_7_days = projected_datetime_3_5Mil_7_days.strftime('%b %d, %Y')
-	print('projected_date_3_5Mil_7_days:', projected_date_3_5Mil_7_days)
-	projected_datetime_3_5Mil_30_days = projected_dates[np.flatnonzero(projected_money_count_30_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
-	projected_date_3_5Mil_30_days = projected_datetime_3_5Mil_30_days.strftime('%b %d, %Y')
+	projected_datetime_XMil_7_days = projected_dates[np.flatnonzero(projected_money_count_7_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
+	# SOMETIMES THE CODE ERRORS HERE. THIS IS THE RESULT OF THE PROJECTION NEVER REACHING $2
+	# MILLION BECAUSE THE RATE OF GROWTH IS TOO LOW. TO FIX: IN list(range(1,X)) ABOVE, 
+	# LOOK FOR THE LINE DEFINING projected_dates,
+	# MAKE X BIGGER UNTIL ERROR GOES AWAY. X IS THE NUMBER OF TIMESTEPS INTO THE FUTURE TO PROJECT.
+	projected_date_XMil_7_days = projected_datetime_XMil_7_days.strftime('%b %d, %Y')
+	print('projected_date_XMil_7_days:', projected_date_XMil_7_days)
+	projected_datetime_XMil_30_days = projected_dates[np.flatnonzero(projected_money_count_30_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
+	projected_date_XMil_30_days = projected_datetime_XMil_30_days.strftime('%b %d, %Y')
 	# -----------------------------------------------------------------------------------------------
 
 	# ''' Plotting data: '''
@@ -357,7 +360,7 @@ def YangMoneyRaised():
 	ax2.tick_params('y', colors='#4b7a46')
 	ax2.legend(labels=['Donations growth'])
 	f.autofmt_xdate()
-	plt.title('$3.5 million projected date: {0} or {1}'.format(projected_date_3_5Mil_7_days, projected_date_3_5Mil_30_days))
+	plt.title('$3.5 million projected date: {0} or {1}'.format(projected_date_XMil_7_days, projected_date_XMil_30_days))
 	# plt.title('Money Raised')
 	plt.savefig('MoneyRaisedYang.png', bbox_inches='tight')
 	plt.show()
@@ -1105,9 +1108,10 @@ def PlotCampaignBetting():
 	# Pandas plotting of odds data for all three races:
 	fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12,6)) # figsize(width, height)
 	print('ax:\n', ax); print('fig:\n', fig)
-	df_dem_odds_top.plot(y=dem_odds_cols, use_index=True, title='Democratic Primary', ax=ax[0]); ax[0].set_ylabel('Odds, %')
-	df_rep_odds_top.plot(y=rep_odds_cols, use_index=True, title='Republican Primary', ax=ax[1])
-	df_pres_odds_top.plot(y=pres_odds_cols, use_index=True, title='Presidential Race', ax=ax[2])
+	df_dem_odds_top.plot(y=dem_odds_cols, use_index=True, title='Democratic Primary', drawstyle='steps-post', ax=ax[0])
+	df_rep_odds_top.plot(y=rep_odds_cols, use_index=True, title='Republican Primary', drawstyle='steps-post', ax=ax[1])
+	df_pres_odds_top.plot(y=pres_odds_cols, use_index=True, title='Presidential Race', drawstyle='steps-post', ax=ax[2])
+	ax[0].set_ylabel('Odds, %')
 	ax[0].legend(loc='center left')
 	ax[1].legend(loc='center left')
 	ax[2].legend(loc='center left')
@@ -1915,7 +1919,7 @@ def NameRecognition():
 ''' -------------------------- '''
 
 ''' --- Run YangMoneyRaised() --- '''
-# YangMoneyRaised()
+YangMoneyRaised()
 ''' --------------------------- '''
 
 
@@ -1959,7 +1963,7 @@ PlotCampaignBetting()
 ''' --------------------------- '''
 
 ''' --- Run OddsPollsCorrelation() --- '''
-OddsPollsCorrelation()
+# OddsPollsCorrelation()
 ''' ---------------------------------- '''
 
 ''' --- Run NameRecognition() --- '''
@@ -1975,7 +1979,7 @@ OddsPollsCorrelation()
 # 						# FOLDER 'Campaign/TwitterMetrics csv backup'. WebMetrics() NEEDS THE CAPABILITY
 # 						# TO LOAD CSV DATA, ADD THE MOST RECENT SCRAPED DATA TO IT AND WRITE BACK TO CSV.
 # 						# WILL HAVE TO ADD THIS CAPABILITY AT SOME POINT BUT FOR NOW COPY AND PASTE WILL BE USED.
-# PlotWebMetrics(['2019,5,1','2019,5,8','2019,5,15','2019,5,22','2019,5,29','2019,6,5'],['2019,5,8','2019,5,15','2019,5,22','2019,5,29','2019,6,5','2019,6,12'])
+# PlotWebMetrics(['2019,6,23','2019,6,30','2019,7,6','2019,7,13','2019,7,20','2019,7,27'],['2019,6,30','2019,7,6','2019,7,13','2019,7,20','2019,7,27','2019,8,3'])
 ''' ------------------------- '''
 
 
