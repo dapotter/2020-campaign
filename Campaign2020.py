@@ -219,13 +219,14 @@ def YangMoneyRaised():
 	print('money_count_str:\n', money_count_str)
 	money_count = int(float(money_count_str))
 	
-	# money_goal_str = driver.find_element_by_css_selector('.total.goal').text
-	money_goal_str = driver.find_element_by_class_name('yang-progress').text
-	money_goal_str = money_goal_str.replace('$','') # Remove $ symbol
-	money_goal_str = money_goal_str.replace(',','') # Remove $ symbol
-	money_goal = int(float(money_goal_str))
+	# # money_goal_str = driver.find_element_by_css_selector('.total.goal').text
+	# money_goal_str = driver.find_element_by_class_name('yang-progress').text
+	# money_goal_str = money_goal_str.replace('$','') # Remove $ symbol
+	# money_goal_str = money_goal_str.replace(',','') # Remove $ symbol
+	# money_goal = int(float(money_goal_str))
+	money_goal = 3500000
 	
-	money_pcnt = (money_count / money_goal)*100
+	money_pcnt = (money_count / money_goal)
 	current_time = datetime.datetime.now()
 
 	print('money_count:', money_count)
@@ -235,19 +236,19 @@ def YangMoneyRaised():
 
 	money_arr = [current_time, money_count, money_goal, money_pcnt]
 
-	fields=['Time','Count','Goal', 'Pcnt']
+	fields=['Time','Count','Goal','Pcnt']
 	money_dict = {'Time':current_time,'Count':money_count,'Goal':money_goal, 'Pcnt':money_pcnt}
 	print('money_dict:\n', money_dict)
 
 
 	''' Creates csv, overwrites the current one of the same name: '''
 	# df = df.append(money_dict, ignore_index=True) # This does nothing
-	# with open('MoneyRaisedYang.csv','w') as f:
+	# with open('YangMoneyRaised.csv','w') as f:
 	#     writer = csv.DictWriter(f, fieldnames=fields)
 	#     writer.writerow(money_dict)
 
 	''' Appends the csv '''
-	with open(r'MoneyRaisedYang.csv', 'a', newline='') as f:
+	with open(r'YangMoneyRaised.csv', 'a', newline='') as f:
 	    writer = csv.DictWriter(f, fieldnames=fields)
 	    writer.writerow(money_dict)
 
@@ -255,24 +256,24 @@ def YangMoneyRaised():
 	driver.quit()
 
 	# Read csv into dataframe:
-	df = pd.read_csv('MoneyRaisedYang.csv')
+	df = pd.read_csv('YangMoneyRaised.csv')
+
 	print('df head:\n', df.head)
 	# Format Time column
 	df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d %H:%M:%S')
 	# Check formatting:
 	#print('time type:\n', type(df.iloc[0]['Time']))
 
-	# Calculate donor growth rate:
-	x = mdates.date2num(df.Time.values) # Time values converted to floats
-	print('Time values converted to numbers:\n', x)
-	y = df['Count'].values # Counts
-	growth_rate = np.gradient(y,x)
-	df['Rate'] = growth_rate
+	df.set_index('Time', inplace=True)
+	df['Q'] = df.index.quarter
+	df.reset_index(inplace=True)
+	df['Rate'] = np.gradient(df.Count, mdates.date2num(df.Time.values))
+	print('df:\n', df)
 
 	print('Dollar Count df:\n', df.to_string())
 
 	# Pickle out:
-	df.to_pickle('/home/dp/Documents/Campaign/pickle/MoneyRaisedYang_df.pkl')
+	df.to_pickle('/home/dp/Documents/Campaign/pickle/YangMoneyRaised_df.pkl')
 
 	# ''' Make projection for 200,000 donors '''
 	# Data from Time and Count column for 7 days prior to the current date
@@ -289,9 +290,9 @@ def YangMoneyRaised():
 	one_mnth_prior_time = current_time - one_mnth_timedelta
 	print('one_wk_prior_time:', one_wk_prior_time)
 	
-	
 	df['Time'] = pd.to_datetime(df['Time'])
 	df.set_index('Time', inplace=True)
+
 	df_7_days = df.loc[one_wk_prior_time:current_time]
 	df_30_days = df.loc[one_mnth_prior_time:current_time]
 	print('df_7_days:\n', df_7_days)
@@ -341,31 +342,87 @@ def YangMoneyRaised():
 	# -----------------------------------------------------------------------------------------------
 
 	# ''' Plotting data: '''
-	#fig = plt.figure()
-	w = 3
-	h = 3
-	#fig = plt.figure(frameon=False)
-	#fig.set_size_inches(w,h)
-	f, ax1 = plt.subplots(figsize=(8,8))
+	# Second quarter:
+	f, (ax1, ax3) = plt.subplots(1,2, figsize=(12,6))
 	ax2 = ax1.twinx()
-	ax1.plot(df.index, df['Count'], linewidth=1, color='k', marker='o', markersize=3, markerfacecolor='none', markeredgecolor='k')
-	ax1.plot(df_7_days.index, df_7_days['Trendline 1 Week'], color='r')
-	ax1.plot(df_30_days.index, df_30_days['Trendline 1 Month'], color='#b2b74e')
-	ax2.plot(df.index, df['Rate'], linewidth=1, color='#4b7a46', marker='^', markersize=3, markerfacecolor='none', markeredgecolor='#4b7a46')
+	df_Q2 = df[ df['Q'] == 2 ]
+	ax1.plot(df_Q2.index, df_Q2.Count, linewidth=1, color='k', marker='o', markersize=3, markerfacecolor='none', markeredgecolor='k')
+	# ax1.plot(df_7_days.index, df_7_days['Trendline 1 Week'], color='r')
+	# ax1.plot(df_30_days.index, df_30_days['Trendline 1 Month'], color='#b2b74e')
+	ax2.plot(df_Q2.index, df_Q2.Rate, linewidth=1, color='#4b7a46', marker='d', markersize=3, markerfacecolor='none', markeredgecolor='#4b7a46')
 	ax1.set_xlabel('DateTime', color='k')
 	ax1.set_ylabel('Money Raised', color='k')
 	ax1.tick_params('y', colors='k')
 	# ax1.legend(labels=['Dollar count','7-day trend','30-day trend'])
-	ax2.set_ylabel('Dollars/Day', color='#4b7a46')
+	# ax2.set_ylabel('Dollars/Day', color='#4b7a46')
 	ax2.tick_params('y', colors='#4b7a46')
 	ax2.legend(labels=['Donations growth'])
 	f.autofmt_xdate()
-	plt.title('$3.5 million projected date: {0} or {1}'.format(projected_date_XMil_7_days, projected_date_XMil_30_days))
-	# plt.title('Money Raised')
-	plt.savefig('MoneyRaisedYang.png', bbox_inches='tight')
-	plt.show()
+	# ax1.set_title('$3.5 million projected date: {0} or {1}'.format(projected_date_XMil_7_days, projected_date_XMil_30_days))
+	ax1.set_title('Q2 Donations and Growth Rate')
 
+	# Third quarter:
+	ax4 = ax3.twinx()
+	df_Q3 = df[ df['Q'] == 3 ]
+	ax3.plot(df_Q3.index, df_Q3.Count, linewidth=1, color='k', marker='o', markersize=3, markerfacecolor='none', markeredgecolor='k')
+	ax3.plot(df_7_days.index, df_7_days['Trendline 1 Week'], color='r')
+	ax3.plot(df_30_days.index, df_30_days['Trendline 1 Month'], color='#b2b74e')
+	ax4.plot(df_Q3.index, df_Q3.Rate, linewidth=1, color='#4b7a46', marker='d', markersize=3, markerfacecolor='none', markeredgecolor='#4b7a46')
+	ax3.set_xlabel('DateTime', color='k')
+	# ax3.set_ylabel('Money Raised', color='k')
+	ax3.tick_params('y', colors='k')
+	ax4.set_ylabel('$/Day', color='#4b7a46')
+	ax4.tick_params('y', colors='#4b7a46')
+	ax4.legend(labels=['Donations growth'])
+	f.autofmt_xdate()
+	ax3.set_title('$3.5 million proj.: {0} or {1}'.format(projected_date_XMil_7_days, projected_date_XMil_30_days))
+
+	plt.subplots_adjust(wspace=0.5)
+	plt.savefig('YangMoneyRaised.png', bbox_inches='tight')
+	plt.show()
 	# ''' --------------- '''
+
+
+	# ''' Plotting Q2 vs Q3: Fundraising Rate: '''
+	print('Index duplicates:\n', df[ ~df.index.duplicated()] )
+	df_rs = df.resample('D').mean().interpolate(method='linear')
+	# df_rs = df
+	df_rs.Q = df_rs.index.quarter # Remaking the Q column
+	df_rs['Rate'] = np.gradient(df_rs.Count, mdates.date2num(df_rs.index.values))
+	
+	# Getting rid of data between end of Q2 July 1 2019, and start of Q3 August 2 2019
+	# Due to resampling the data on a daily frequency, it filled in all of July for which there is no data
+	# Grabbing all data outside of July here:
+	df_rs = df_rs[ (df_rs.index < '2019-07-01') | (df_rs.index > '2019-08-02') ]
+	print('df_rs:\n', df_rs)
+	rate_mean = df_rs.groupby('Q')['Rate'].agg(['mean', 'median'])
+	print('rate_mean:\n', rate_mean)
+	rate_mean.rename({2:'Q2',3:'Q3'}, axis=0, inplace=True)
+	rate_mean.rename({'mean':'Avg', 'median':'Median'}, axis=1, inplace=True)
+	print('rate_mean:\n', rate_mean)
+	
+	# Again, due to resampling, need to redefine second and third quarters
+	df_Q2 = df_rs[ df_rs.Q == 2 ]
+	df_Q3 = df_rs[ df_rs.Q == 3 ]
+
+	plt.close()
+	fig, (ax1, ax2) = plt.subplots(1,2, figsize=(8,3))
+	rate_mean.plot.bar(use_index=True, ax=ax1, color=['#000000', '#757575'])
+	df_Q2.plot(use_index=True, y='Count', ax=ax2, color='#40000c', marker='o', label='Q2', legend=True, alpha=0.7)
+	df_Q3.plot(use_index=True, y='Count', ax=ax2, color='#9c001d', marker='o', label='Q3', legend=True, alpha=0.7)
+	ax1.set_xlabel('Quarter')
+	ax1.set_ylabel('$/Day')
+	ax1.set_title('Q2-Q3 Donation Rates')
+	ax1.legend(loc='upper left')
+	ax2.set_ylabel('Donations, $')
+	ax2.set_xlabel('Date')
+	ax2.set_title('Q2-Q3 Total Donations')
+	ax2.legend(loc='upper left')
+	plt.subplots_adjust(wspace=0.4)
+	plt.savefig('/home/dp/Documents/Campaign/YangMoneyRaised_rate_comparison.png', bbox_inches='tight')
+	plt.show()
+	# ''' --------------- '''
+
 
 	# ''' try-except isn't necessary unless webpage won't load '''
 	#
@@ -1921,6 +1978,24 @@ def NameRecognition():
 ''' --- Run YangMoneyRaised() --- '''
 YangMoneyRaised()
 ''' --------------------------- '''
+
+# def combine():
+# 	df_Q3 = pd.read_csv('/home/dp/Documents/Campaign/YangMoneyRaised_Q3.csv', header='infer')
+# 	df_Q2 = pd.read_csv('/home/dp/Documents/Campaign/YangMoneyRaised_Q2.csv', header='infer')
+
+# 	df = pd.concat([df_Q2, df_Q3], axis=0)
+# 	df.Time = pd.to_datetime(df.Time)
+# 	df.set_index('Time', inplace=True)
+
+# 	df['Q'] = df.index.quarter
+# 	df.Q = df.Q.astype('category')
+# 	print('df:\n', df)
+
+# 	df.to_csv('/home/dp/Documents/Campaign/YangMoneyRaised.csv')
+
+# combine()
+
+
 
 
 ''' --- Scheduling the YangDonorCounter() data collection: --- '''
