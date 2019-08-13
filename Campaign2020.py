@@ -407,19 +407,24 @@ def YangMoneyRaised():
 
 	plt.close()
 	fig, (ax1, ax2) = plt.subplots(1,2, figsize=(8,3))
-	rate_mean.plot.bar(use_index=True, ax=ax1, color=['#000000', '#757575'])
-	df_Q2.plot(use_index=True, y='Count', ax=ax2, color='#40000c', marker='o', label='Q2', legend=True, alpha=0.7)
-	df_Q3.plot(use_index=True, y='Count', ax=ax2, color='#9c001d', marker='o', label='Q3', legend=True, alpha=0.7)
+	# rate_mean.plot.bar(use_index=True, ax=ax1, color=['#000000', '#757575'])
+	sns.barplot(x='Q', y='Rate', data=df_rs, ax=ax1, palette=['#000000', '#757575'], alpha=0.7)
+	df_Q2.plot(use_index=True, y='Count', ax=ax2, color='#40000c', marker='o', label='Q2', legend=True, alpha=0.5)
+	df_Q3.plot(use_index=True, y='Count', ax=ax2, color='#9c001d', marker='o', label='Q3', legend=True, alpha=0.5)
 	ax1.set_xlabel('Quarter')
 	ax1.set_ylabel('$/Day')
 	ax1.set_title('Q2-Q3 Donation Rates')
-	ax1.legend(loc='upper left')
 	ax2.set_ylabel('Donations, $')
 	ax2.set_xlabel('Date')
 	ax2.set_title('Q2-Q3 Total Donations')
 	ax2.legend(loc='upper left')
 	plt.subplots_adjust(wspace=0.4)
 	plt.savefig('/home/dp/Documents/Campaign/YangMoneyRaised_rate_comparison.png', bbox_inches='tight')
+	plt.show()
+
+	plt.close()
+	fig, ax = plt.subplots(1,2, figsize=(8,3))
+
 	plt.show()
 	# ''' --------------- '''
 
@@ -1484,6 +1489,119 @@ def PlotWebMetrics(datepoints_start_list, datepoints_end_list):
 	df_no_dt_index = df[df['Name']=='realDonaldTrump'].index
 	df.drop(df_no_dt_index, inplace=True)
 	print('*************************************** df:\n', df.to_string())
+	
+	# The data is in tidy (long-form) format with dates and candidates repeated
+	# Convert to short-form with pd.pivot
+	df = df.pivot(index='Date', columns='Name')
+	# Rename candidate names:
+	name_dict = {'AndrewYang':'Yang', 'joebiden':'Biden', 'TulsiGabbard':'Gabbard', 'BernieSanders':'Sanders', 'ewarren':'Warren', 'BetoORourke':'ORourke', 'CoryBooker':'Booker', 'PeteButtigieg':'Buttigieg', 'amyklobuchar':'Klobuchar'}
+	df.rename(name_dict, axis=1, level=1, inplace=True) # level 0 = data type names e.g. 'Daily Followers Gained', level 1 = candidate names
+	# Getting only 2019 follower data:
+	df_2019 = df[ df.index >= '2019-01-01' ].loc[:, ['Daily Followers Gained','Total Follower Count']]
+	print('df_2019:\n', df_2019.to_string())
+	# The level 0 columns lack a name. Call it 'Stat'
+	df_2019.columns.rename('Stat', level=0, inplace=True)
+	print('Column level names:\n', df.columns.names)
+	# Identify an NaNs:
+	print('df_2019 nulls:\n', df_2019.isnull().sum())
+	# There is one NaN in Yang's Feb 27 data. Fill it with linear interpolation
+	df_2019 = df_2019.interpolate(method='linear')
+	# Check NaNs again:
+	print('df_2019 nulls:\n', df_2019.isnull().sum())
+	# No more NaNs remaining.
+	# Baseline the 'Total Follower Count', assign to 'Total Follower Count Based' column
+	min_followers = df_2019.loc['2019-01-01', 'Total Follower Count']
+	follower_count_baseline = df_2019.loc[:, 'Total Follower Count'].subtract(min_followers)
+	follower_count_baseline.columns = pd.MultiIndex.from_product([['Total Follower Count Based'], follower_count_baseline.columns], names=['Stat','Name'])
+	print('follower_count_baseline:\n', follower_count_baseline)
+	# Join the new Series to the df:
+	df_2019 = df_2019.join(follower_count_baseline)
+	# Convert all data to integers
+	df_2019 = df_2019.astype(dtype='int32', copy=True)
+	print('df_2019:\n', df_2019.to_string())
+
+
+	# Questions: For each candidate...
+	# 1. Raw follower growth from baseline, average rate of follower growth
+	# 2. % growth for each candidate
+	# 3. Weekly % growth bar plot
+
+	# 1.
+	df_count_based = df_2019.loc[:, ['Total Follower Count Based']]
+	df_count_based.columns = df_count_based.columns.droplevel(0)
+	print('df_count_based:\n', df_count_based)
+
+	df_growth = df_2019.loc[:, ['Daily Followers Gained']].melt(value_name='Growth').drop('Stat', axis=1)
+	# Calculating the averages, broadcasting to tidy formatted data for sorting, hence why I use transform instead of apply
+	df_growth['Avg'] = df_growth.groupby('Name').transform('mean')
+	print('df_growth:\n', df_growth)
+	df_growth.sort_values(by='Avg', ascending=False, inplace=True)
+	df_growth.drop('Avg', axis=1, inplace=True)
+	print('df_growth:\n', df_growth)
+
+	fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,4))
+	df_count_based.plot(use_index=True, ax=ax1)
+	sns.barplot(x='Name', y='Growth', data=df_growth, estimator=np.mean, ax=ax2)
+	ax1.set_xlabel('Day')
+	ax1.set_ylabel('Followers')
+	ax2.set_xlabel('Candidate')
+	ax2.set_ylabel('Avg. Growth Rate, Followers/Day')
+	plt.xticks(rotation=90)
+	plt.subplots_adjust(left=0.1, bottom=0.2, wspace=0.3)
+	plt.savefig('twitter_metrics__followers_gained.png', bbox_inches='tight')
+	plt.show()
+	# Buttigieg leads in the follower count and growth rate metric
+
+	# 2. Percent growth:
+	# Calculating percent growth in twitter followers
+	end_date = df_2019.index[-1].date()
+	print('end_date:\n', end_date)
+	print('last value:\n', df_2019.loc[end_date, ['Total Follower Count Based']])
+	df_pcnt_growth = df_2019.loc[end_date, ['Total Follower Count Based']].droplevel(0) / df_2019.loc['2019-01-01', ['Total Follower Count']].droplevel(0) * 100
+	df_pcnt_growth.sort_values(ascending=False, inplace=True)
+	print('df_pcnt_growth:\n', df_pcnt_growth)
+
+	plt.close()
+	plt.figure()
+	df_pcnt_growth.plot.bar(use_index=True)
+	plt.xlabel('Day')
+	plt.ylabel('Pcnt Growth')
+	plt.xticks(rotation=90)
+	plt.subplots_adjust(left=0.1, bottom=0.2, wspace=0.3)
+	plt.yscale('log')
+	plt.title('Percent Growth in Followers - Jan 1, 2019 to Present')
+	plt.savefig('twitter_metrics__pcnt_growth_in_followers.png', bbox_inches='tight')
+	plt.show()
+
+	# 3. Weekly growth bar plot for each candidate:
+	# Need to get percent change for each weekdf_pcnt_growth
+	df_pcnt_growth = df_2019.loc[:, ['Total Follower Count']] # Q. Write a question asking what this produces
+	df_pcnt_growth.columns = df_pcnt_growth.columns.droplevel(0)
+	print('df_pcnt_growth:\n', df_pcnt_growth)
+	print('duplicate columns:\n', df_pcnt_growth.index.duplicated().sum())
+	print('index:\n', df_pcnt_growth.index)
+	# Resample to weekly, get max follower count for the week, percent change week to week, drop NaNs, only get last 10 weeks
+	df_pcnt_growth_weekly = df_pcnt_growth.resample('W-SUN').max().pct_change().dropna().iloc[-7:-1]
+	# Convert datetime index to date:
+	df_pcnt_growth_weekly.reset_index(inplace=True)
+	df_pcnt_growth_weekly['Date'] = df_pcnt_growth_weekly['Date'].dt.date
+	df_pcnt_growth_weekly.set_index('Date', inplace=True)
+	print('df_pcnt_growth_weekly.index:\n', df_pcnt_growth_weekly.index)
+	# Transpose so the candidate names are the index, and will be in the x-axis in the bar plot
+	df_pcnt_growth_weekly = df_pcnt_growth_weekly.T
+	print('df_pcnt_growth_weekly:\n', df_pcnt_growth_weekly)
+	# PLOT RAW FOLLOWER GROWTH IN A SUBPLOT BELOW THE PERCENT GROWTH CHANGE
+
+	plt.close()
+	fig, ax = plt.subplots(1,1, figsize=(20,4))
+	df_pcnt_growth_weekly.plot.bar(use_index=True, ax=ax)
+	ax.set_xlabel('Week')
+	ax.set_ylabel('Percent Follower Growth')
+	plt.subplots_adjust(bottom=0.3)
+	plt.savefig('twitter_metrics__percent_growth.png', bbox_inches='tight')
+	plt.show()
+
+	return
 
 	''' Time Series Line Plots '''
 	plt.close()
@@ -1976,25 +2094,8 @@ def NameRecognition():
 ''' -------------------------- '''
 
 ''' --- Run YangMoneyRaised() --- '''
-YangMoneyRaised()
+# YangMoneyRaised()
 ''' --------------------------- '''
-
-# def combine():
-# 	df_Q3 = pd.read_csv('/home/dp/Documents/Campaign/YangMoneyRaised_Q3.csv', header='infer')
-# 	df_Q2 = pd.read_csv('/home/dp/Documents/Campaign/YangMoneyRaised_Q2.csv', header='infer')
-
-# 	df = pd.concat([df_Q2, df_Q3], axis=0)
-# 	df.Time = pd.to_datetime(df.Time)
-# 	df.set_index('Time', inplace=True)
-
-# 	df['Q'] = df.index.quarter
-# 	df.Q = df.Q.astype('category')
-# 	print('df:\n', df)
-
-# 	df.to_csv('/home/dp/Documents/Campaign/YangMoneyRaised.csv')
-
-# combine()
-
 
 
 
@@ -2028,8 +2129,8 @@ YangMoneyRaised()
 
 
 ''' --- Run CampaignBetting() --- '''
-CampaignBetting()
-PlotCampaignBetting()
+# CampaignBetting()
+# PlotCampaignBetting()
 # --- Sorting Campaign ---
 # Only run if there's an issue
 # with betting odds getting
@@ -2054,7 +2155,7 @@ PlotCampaignBetting()
 # 						# FOLDER 'Campaign/TwitterMetrics csv backup'. WebMetrics() NEEDS THE CAPABILITY
 # 						# TO LOAD CSV DATA, ADD THE MOST RECENT SCRAPED DATA TO IT AND WRITE BACK TO CSV.
 # 						# WILL HAVE TO ADD THIS CAPABILITY AT SOME POINT BUT FOR NOW COPY AND PASTE WILL BE USED.
-# PlotWebMetrics(['2019,6,23','2019,6,30','2019,7,6','2019,7,13','2019,7,20','2019,7,27'],['2019,6,30','2019,7,6','2019,7,13','2019,7,20','2019,7,27','2019,8,3'])
+PlotWebMetrics(['2019,6,23','2019,6,30','2019,7,6','2019,7,13','2019,7,20','2019,7,27'],['2019,6,30','2019,7,6','2019,7,13','2019,7,20','2019,7,27','2019,8,3'])
 ''' ------------------------- '''
 
 
