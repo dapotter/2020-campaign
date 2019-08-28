@@ -224,7 +224,7 @@ def YangMoneyRaised():
 	# money_goal_str = money_goal_str.replace('$','') # Remove $ symbol
 	# money_goal_str = money_goal_str.replace(',','') # Remove $ symbol
 	# money_goal = int(float(money_goal_str))
-	money_goal = 3500000
+	money_goal = 5000000
 	
 	money_pcnt = (money_count / money_goal)
 	current_time = datetime.datetime.now()
@@ -330,19 +330,20 @@ def YangMoneyRaised():
 	# print('projected_dates:', projected_dates)
 	# print('projected_money_count:\n', projected_money_count)
 	print('shape projected_money_count_7_days:\n', np.shape(projected_money_count_7_days))
-	projected_datetime_XMil_7_days = projected_dates[np.flatnonzero(projected_money_count_7_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
+	projected_datetime_XMil_7_days = projected_dates[np.flatnonzero(projected_money_count_7_days > money_goal)[0]] # np.where also works but returns a 1-element tuple
 	# SOMETIMES THE CODE ERRORS HERE. THIS IS THE RESULT OF THE PROJECTION NEVER REACHING $2
 	# MILLION BECAUSE THE RATE OF GROWTH IS TOO LOW. TO FIX: IN list(range(1,X)) ABOVE, 
 	# LOOK FOR THE LINE DEFINING projected_dates,
 	# MAKE X BIGGER UNTIL ERROR GOES AWAY. X IS THE NUMBER OF TIMESTEPS INTO THE FUTURE TO PROJECT.
 	projected_date_XMil_7_days = projected_datetime_XMil_7_days.strftime('%b %d, %Y')
 	print('projected_date_XMil_7_days:', projected_date_XMil_7_days)
-	projected_datetime_XMil_30_days = projected_dates[np.flatnonzero(projected_money_count_30_days > 3500000)[0]] # np.where also works but returns a 1-element tuple
+	projected_datetime_XMil_30_days = projected_dates[np.flatnonzero(projected_money_count_30_days > money_goal)[0]] # np.where also works but returns a 1-element tuple
 	projected_date_XMil_30_days = projected_datetime_XMil_30_days.strftime('%b %d, %Y')
 	# -----------------------------------------------------------------------------------------------
 
 	# ''' Plotting data: '''
 	# Second quarter:
+	plt.close()
 	f, (ax1, ax3) = plt.subplots(1,2, figsize=(12,6))
 	ax2 = ax1.twinx()
 	df_Q2 = df[ df['Q'] == 2 ]
@@ -375,7 +376,7 @@ def YangMoneyRaised():
 	ax4.tick_params('y', colors='#4b7a46')
 	ax4.legend(labels=['Donations growth'])
 	f.autofmt_xdate()
-	ax3.set_title('$3.5 million proj.: {0} or {1}'.format(projected_date_XMil_7_days, projected_date_XMil_30_days))
+	ax3.set_title('${0} million proj.: {1} or {2}'.format(money_goal/1E6, projected_date_XMil_7_days, projected_date_XMil_30_days))
 
 	plt.subplots_adjust(wspace=0.5)
 	plt.savefig('YangMoneyRaised.png', bbox_inches='tight')
@@ -422,10 +423,6 @@ def YangMoneyRaised():
 	plt.savefig('/home/dp/Documents/Campaign/YangMoneyRaised_rate_comparison.png', bbox_inches='tight')
 	plt.show()
 
-	plt.close()
-	fig, ax = plt.subplots(1,2, figsize=(8,3))
-
-	plt.show()
 	# ''' --------------- '''
 
 
@@ -774,43 +771,69 @@ def FEC():
 
 
 ''' ----------------------------------------------------------------------------------------------- '''
-
-
 def NationalPolling():
 	df = pd.read_csv('/home/dp/Documents/Campaign/NationalPolling.csv', sep=',')
 	print('df:\n', df.to_string())
-	unparsed_dates = df['Date'].values.tolist()
+	print(df.isnull().sum())
+
+	# pandas is unable to convert the current string to a datetime, so string
+	# formatting is done to remove the first date and merge with the Year column
+	unparsed_dates = df.Date.tolist()
+	print('Dates before parsing:\n', unparsed_dates)
+	# Removing '-' and all spaces from '8/17 - 8/20'
 	parsed_dates = [s[0:s.index('- ')].replace('- ','').replace(' ','') for s in unparsed_dates]
-	print('df:\n', df.to_string())
-
-	years = df['Year']
-	complete_dates = [d+'/'+str(y) for d,y in zip(parsed_dates, years)]
-	formatted_dates = [datetime.datetime.strptime(d, '%m/%d/%Y') for d in complete_dates]
-	#print('formatted_dates:', formatted_dates)
-	df['Date'] = formatted_dates
-	print('df.iloc[10,"Date"]:\n', type(df['Date'].iloc[10]))
+	complete_dates = [d+'/'+str(y) for d,y in zip(parsed_dates, df.Year)]
+	# Making a Series to assign to overwrite Date column of df. Could have also
+	# converted complete_dates to NumPy array using np.asarray(complete_dates) and
+	# assigned it to df.Date
+	df.Date = pd.Series(complete_dates)
+	df.Date = pd.to_datetime(df.Date)	
+	# Don't need the Year column anymore:
 	df.drop('Year', axis=1, inplace=True)
-	#print('-- character:\n', df.loc[df['Date']=='2019-03-25','Yang'])
+	# Drop Klobuchar so final plot can be 4x3:
+	df.drop('Klobuchar', axis=1, inplace=True)
 	df.replace('--', np.nan, inplace=True)
-
 	df.set_index('Date', inplace=True)
-	print('df:\n', df.to_string())
-
 	# Removing the apostrophe from O'Rourke
-	df.columns = [s.replace("'","") for s in df.columns]
-	# Dropping 'Poll' column
-	candidates = df.columns[1:]
-	df = df[candidates].apply(pd.to_numeric, errors='coerce')
-	
-	# Data associated with duplicate dates are averaged
-	df = df.groupby(df.index).mean()
-
+	df.columns = df.columns.str.replace("'", "")
+	# Create a list of candidates:
+	candidates = df.columns.values[1:]
+	# df.iloc[:, 1:] = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce') # This is superceded by the integer conversion below
+	# Note that pd.to_numeric above can't be applied to an entire dataframe like astype can. It acts on 1-D objects: arrays, strings, Series, etc.
+	# Convert to nullable int8:
+	df.loc[:,candidates] = df.loc[:,candidates].astype(dtype='float64', errors='raise') # All the numbers are strings, so convert to float first...
+	df.loc[:,candidates] = df.loc[:,candidates].astype(dtype=pd.Int8Dtype(), errors='raise') # then convert to nullable int8
 	print('df:\n', df.to_string())
+	print('df.dtypes:\n', df.dtypes)
 
-	NationalPolling_df_pkl = df.to_pickle('/home/dp/Documents/Campaign/pickle/NationalPolling_df.pkl')
+	# Finding the average and std deviation of each poll
+	# This data isn't used for anything at the moment
+	poll_agg = df.groupby('Poll').agg(['mean','std'])
+	print('poll_agg:\n', poll_agg)
+	
+	# Melting for the purpose of seaborn plots
+	df_sns = df.reset_index()
+	print('df_sns:\n', df_sns)
+	df_sns = pd.melt(df_sns, id_vars=['Date','Poll'], value_vars=candidates, var_name='Candidate', value_name='PollPcnt')
+	print('df_sns:\n', df_sns)
+	print('df_sns.dtypes:\n', df_sns.dtypes)
+	df_sns.PollPcnt = df_sns.PollPcnt.astype(dtype=pd.Int8Dtype(), errors='raise')
 
-	print('Democratic Primary Candidates:\n', candidates)
-	df.plot(y=candidates, title='National Polling - Democratic Primary')
+
+	# CatPlot of bars: mean and std of each poll for each candidate
+	plt.close()
+	g = sns.catplot(kind='bar', x='Poll', y='PollPcnt', col='Candidate', data=df_sns, estimator=np.mean, col_wrap=3, height=2, aspect=1.5)
+	g.set_xticklabels(rotation=90)
+	plt.savefig('national_polling__poll_comparison.png', bbox_inches='tight')
+	plt.show()
+
+	# Lineplot: Time series of polling percent
+	plt.close()
+	plt.figure(figsize=(7,6))
+	sns.lineplot(x='Date', y='PollPcnt', hue='Candidate', data=df_sns, estimator=np.mean)
+	plt.xticks(rotation=45)
+	plt.ylabel('National Polling, %')
+	plt.savefig('national_polling__poll_time_series.png', bbox_inches='tight')
 	plt.show()
 
 	return
@@ -818,13 +841,6 @@ def NationalPolling():
 
 
 def CampaignBetting():
-	# soup = bs.BeautifulSoup(html_source, 'lxml')
-	# print('soup')
-	# tables = soup.findAll('table', {'src': 'detail'})
-
-	# for table in tables:
- #     if table.findParent("table") is None:
- #         print str(table)
 
 	driver = webdriver.Chrome('/usr/bin/chromedriver')
 	# Runningn 'driver.minimize_window()' doesn't allow the donor count to update
@@ -863,9 +879,7 @@ def CampaignBetting():
 		print('!!!!!!!!!!!! Warning: number of candidates does not match number of percentiles\n\n\n\n\n\n\n\n')
 
 	# Combine both lists:
-	# Not using this: name_pcnt_list = [[i,j] for i,j in zip(name_list,pcnt_list)]
-
-
+	# name_pcnt_list = [[i,j] for i,j in zip(name_list,pcnt_list)] # Not using this as I don't need to combine
 
 	print('scraped name_list:\n', name_list)
 	print('scraped pcnt_list:\n', odds_list)
@@ -2027,7 +2041,7 @@ def NameRecognition():
 ''' -------------------------- '''
 
 ''' --- Run YangMoneyRaised() --- '''
-# YangMoneyRaised()
+YangMoneyRaised()
 ''' --------------------------- '''
 
 
@@ -2061,8 +2075,8 @@ def NameRecognition():
 
 
 ''' --- Run CampaignBetting() --- '''
-# CampaignBetting()
-# PlotCampaignBetting()
+CampaignBetting()
+PlotCampaignBetting()
 # --- Sorting Campaign ---
 # Only run if there's an issue
 # with betting odds getting
@@ -2087,7 +2101,7 @@ def NameRecognition():
 # 						# FOLDER 'Campaign/TwitterMetrics csv backup'. WebMetrics() NEEDS THE CAPABILITY
 # 						# TO LOAD CSV DATA, ADD THE MOST RECENT SCRAPED DATA TO IT AND WRITE BACK TO CSV.
 # 						# WILL HAVE TO ADD THIS CAPABILITY AT SOME POINT BUT FOR NOW COPY AND PASTE WILL BE USED.
-PlotWebMetrics(9, 'W-THU')		# For trend plots, plot 7 weeks into the past, weekly frequency to 'W-SAT' or any of your choice
+# PlotWebMetrics(8, 'W-FRI')		# For trend plots, plot 7 weeks into the past, weekly frequency to 'W-SAT' or any of your choice
 ''' ------------------------- '''
 
 
