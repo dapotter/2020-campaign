@@ -282,7 +282,7 @@ def YangMoneyRaised():
 	# Put date value into plot: 'Projected 200,000 donors'
 
 	current_time = datetime.datetime.now()
-	print('current time:', current_time)
+	print('Current Time:', current_time)
 	one_wk_timedelta = datetime.timedelta(days=7)
 	one_mnth_timedelta = datetime.timedelta(days=30)
 	print('one_wk_timedelta:', one_wk_timedelta)
